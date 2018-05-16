@@ -90,6 +90,15 @@ bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
 void broadcast_block(const Block *block){
   //No enviar a mí mismo
   //TODO: Completar
+    int world_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    int world_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    //mando desde el de la derecha en adelante, supongo q es un orden distinto... no?
+    for (int i = world_rank; i <world_size+world_rank ; ++i) {
+        int dest=i%world_size;
+        MPI_Send(block, 1, *MPI_BLOCK, dest, 0, MPI_COMM_WORLD);
+    }
 }
 
 //Proof of work
