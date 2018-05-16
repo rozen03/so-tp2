@@ -95,8 +95,9 @@ void broadcast_block(const Block *block){
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     //mando desde el de la derecha en adelante, supongo q es un orden distinto... no?
-    for (int i = world_rank; i <world_size+world_rank ; ++i) {
-        int dest=i%world_size;
+    int dest;
+    for (int i = world_rank+1; i <world_size+world_rank ; ++i) {
+        dest=i%world_size;
         MPI_Send(block, 1, *MPI_BLOCK, dest, 0, MPI_COMM_WORLD);
     }
 }
