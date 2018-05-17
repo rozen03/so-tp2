@@ -95,7 +95,7 @@ void broadcast_block(const Block *block){
         dest=i%total_nodes;
 		// cout<<"soy "<<mpi_rank<<" voy a mandarle bloque a "<<dest<<endl;
 		// cout<<"Mando: "<<block->index<<endl;
-        MPI_Send(block, 1, *MPI_BLOCK, dest, 0, MPI_COMM_WORLD);
+        MPI_Send(block, 1, *MPI_BLOCK, dest, TAG_NEW_BLOCK, MPI_COMM_WORLD);
     }
 }
 
