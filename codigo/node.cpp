@@ -8,7 +8,7 @@
 #include <atomic>
 #include <mpi.h>
 #include <map>
-
+#include <unistd.h>
 int total_nodes, mpi_rank;
 Block *last_block_in_chain;
 map<string,Block> node_blocks;
@@ -89,15 +89,12 @@ bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
 //Envia el bloque minado a todos los nodos
 void broadcast_block(const Block *block){
   //No enviar a mí mismo
-  //TODO: Completar
-    int world_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-    int world_size;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     //mando desde el de la derecha en adelante, supongo q es un orden distinto... no?
     int dest;
-    for (int i = world_rank+1; i <world_size+world_rank ; ++i) {
-        dest=i%world_size;
+    for (int i = mpi_rank+1; i <total_nodes+mpi_rank ; ++i) {
+        dest=i%total_nodes;
+		// cout<<"soy "<<mpi_rank<<" voy a mandarle bloque a "<<dest<<endl;
+		// cout<<"Mando: "<<block->index<<endl;
         MPI_Send(block, 1, *MPI_BLOCK, dest, 0, MPI_COMM_WORLD);
     }
 }
@@ -165,18 +162,32 @@ int node(){
   last_block_in_chain->difficulty = DEFAULT_DIFFICULTY;
   last_block_in_chain->created_at = static_cast<unsigned long int> (time(NULL));
   memset(last_block_in_chain->previous_block_hash,0,HASH_SIZE);
-
+	// sleep(100);
   //TODO: Crear thread para minar
-
+    //otro dia
   while(true){
-
+      Block block;
+	  int res;
       //TODO: Recibir mensajes de otros nodos
-
+     unsigned int src;
+      printf("Process %d in  %d processes\n", mpi_rank,total_nodes);
+	  //mando a todos algo, para ver q ondat
+      broadcast_block(last_block_in_chain);
+      for (unsigned int i = mpi_rank+1; i <((unsigned int)total_nodes+mpi_rank) ; ++i) {
+          src = i % total_nodes;
+          //MPI_Send(block, 1, *MPI_BLOCK, dest, 0, MPI_COMM_WORLD);
+		  printf("soy %d y quiero un bloque de %d\n", mpi_rank,src);
+          MPI_Recv(&block, 1, *MPI_BLOCK, src, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		  cout<<"Recibí "<<block.node_owner_number<<endl;
+		//   printf("%s",block_to_str(&block));
+		//   printf("soy %d y recibi droga de %d\n", mpi_rank,src);
+          //printf("Process 1 received number %d from process 0\n", number);
       //TODO: Si es un mensaje de nuevo bloque, llamar a la función
       // validate_block_for_chain con el bloque recibido y el estado de MPI
 
       //TODO: Si es un mensaje de pedido de cadena,
       //responderlo enviando los bloques correspondientes
+  }
 
   }
 
