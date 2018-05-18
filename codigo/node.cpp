@@ -16,13 +16,12 @@ atomic<bool> probando;
 //Cuando me llega una cadena adelantada, y tengo que pedir los nodos que me faltan
 //Si nos separan más de VALIDATION_BLOCKS bloques de distancia entre las cadenas, se descarta por seguridad
 bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
-
   //TODO: Enviar mensaje TAG_CHAIN_HASH
-
+	// MPI_Send(rblock, 1, *MPI_BLOCK, rBlock->node_owner_number, TAG_CHAIN_HASH, MPI_COMM_WORLD);
   Block *blockchain = new Block[VALIDATION_BLOCKS];
 
   //TODO: Recibir mensaje TAG_CHAIN_RESPONSE
-
+	// MPI_Send(rblock, 1, *MPI_BLOCK, rBlock->node_owner_number, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD);
   //TODO: Verificar que los bloques recibidos
   //sean válidos y se puedan acoplar a la cadena
     //delete []blockchain;
@@ -172,16 +171,13 @@ probando=false;
       //TODO: Recibir mensajes de otros nodos
      unsigned int src;
       printf("Process %d in  %d processes\n", mpi_rank,total_nodes);
-
-
-      for (unsigned int i = mpi_rank+1; i <((unsigned int)total_nodes+mpi_rank) ; ++i) {
 		  while(!probando){
-			//   cout<<"ESPERO"<<endl;
+			//  cout<<"ESPERO"<<endl;
 		  }
-          src = i % total_nodes;
-		  printf("soy %d y quiero un bloque de %d\n", mpi_rank,src);
-          MPI_Recv(&block, 1, *MPI_BLOCK, src, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		  cout<<"Recibí "<<block.node_owner_number<<endl;
+		  MPI_Status status;
+          MPI_Recv(&block, 1, *MPI_BLOCK,  MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+		//   cout<<"Recibí "<<block.node_owner_number<<endl;
+		cout<<"Recibí "<<status.MPI_SOURCE<<endl;
 
 
 
@@ -190,7 +186,7 @@ probando=false;
 
       //TODO: Si es un mensaje de pedido de cadena,
       //responderlo enviando los bloques correspondientes
-  }
+
 
   }
 
