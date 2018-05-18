@@ -12,7 +12,7 @@
 int total_nodes, mpi_rank;
 Block *last_block_in_chain;
 map<string,Block> node_blocks;
-
+atomic<bool> probando;
 //Cuando me llega una cadena adelantada, y tengo que pedir los nodos que me faltan
 //Si nos separan más de VALIDATION_BLOCKS bloques de distancia entre las cadenas, se descarta por seguridad
 bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
@@ -120,7 +120,7 @@ void* proof_of_work(void *ptr){
 
       //Hashear el contenido (con el nuevo nonce)
       block_to_hash(&block,hash_hex_str);
-
+	  probando=true;
       //Contar la cantidad de ceros iniciales (con el nuevo nonce)
       if(solves_problem(hash_hex_str)){
 
@@ -137,7 +137,7 @@ void* proof_of_work(void *ptr){
             broadcast_block(last_block_in_chain);
           }
       }
-
+	  probando=false;
     }
 
     return NULL;
@@ -145,7 +145,7 @@ void* proof_of_work(void *ptr){
 
 
 int node(){
-
+probando=false;
   //Tomar valor de mpi_rank y de nodos totales
   MPI_Comm_size(MPI_COMM_WORLD, &total_nodes);
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
@@ -162,26 +162,29 @@ int node(){
   last_block_in_chain->difficulty = DEFAULT_DIFFICULTY;
   last_block_in_chain->created_at = static_cast<unsigned long int> (time(NULL));
   memset(last_block_in_chain->previous_block_hash,0,HASH_SIZE);
-	// sleep(100);
   //TODO: Crear thread para minar
+  pthread_t thread;
+  pthread_create(&thread, NULL, proof_of_work, NULL);
     //otro dia
   while(true){
       Block block;
-	  int res;
+
       //TODO: Recibir mensajes de otros nodos
      unsigned int src;
       printf("Process %d in  %d processes\n", mpi_rank,total_nodes);
-	  //mando a todos algo, para ver q ondat
-      broadcast_block(last_block_in_chain);
+
+
       for (unsigned int i = mpi_rank+1; i <((unsigned int)total_nodes+mpi_rank) ; ++i) {
+		  while(!probando){
+			//   cout<<"ESPERO"<<endl;
+		  }
           src = i % total_nodes;
-          //MPI_Send(block, 1, *MPI_BLOCK, dest, 0, MPI_COMM_WORLD);
 		  printf("soy %d y quiero un bloque de %d\n", mpi_rank,src);
           MPI_Recv(&block, 1, *MPI_BLOCK, src, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		  cout<<"Recibí "<<block.node_owner_number<<endl;
-		//   printf("%s",block_to_str(&block));
-		//   printf("soy %d y recibi droga de %d\n", mpi_rank,src);
-          //printf("Process 1 received number %d from process 0\n", number);
+
+
+
       //TODO: Si es un mensaje de nuevo bloque, llamar a la función
       // validate_block_for_chain con el bloque recibido y el estado de MPI
 
