@@ -45,7 +45,9 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 		return false;
 	}
 	// El hash del bloque recibido es igual al calculado por la función block_to_hash.
-	if(strcmp(block_to_hash(blockchain[0]),blockchain[0].block_hash) !=0){
+	string hash;
+	block_to_hash(&blockchain[0],hash);
+	if(strcmp(hash.c_str(),blockchain[0].block_hash) !=0){
 		delete []blockchain;
 		return false;
 	}
@@ -58,7 +60,7 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 		 	return false;
 		}
 		//Cada bloque siguiente de la lista, contiene el índice anterior al actual elemento.
-		if((blockchain[i].index == blockchain[i+1].index+1){
+		if((blockchain[i].index != blockchain[i+1].index+1)){
 			delete []blockchain;
 			return false;
 		}
@@ -66,7 +68,7 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 
 	bool hayAlguno=false;
 	for (size_t i = 0; i < countt; i++) {
-		if (node_blocks.find([blockchain[i].block_hash) != node_blocks.end()){
+		if (node_blocks.find(blockchain[i].block_hash) != node_blocks.end()){
 			hayAlguno=true;
 			break;
 		}
