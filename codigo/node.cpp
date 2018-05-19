@@ -38,6 +38,10 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 	MPI_Get_count(&sttatus,*MPI_BLOCK, &countt);
 	cout<<"RECIBI LA CAENA de tamanio: "<< countt<<endl;
 	//TODO: Verificar que los bloques recibidos
+	if (blockchain[0].index != rBlock->index || strcmp(blockchain[0].block_hash,rBlock->block_hash)!= 0){
+		delete []blockchain;
+		return false;
+	}
 	for (size_t i = 0; i < countt; i++) {
 		//sean válidos y se puedan acoplar a la cadena
 		if (valid_new_block(&blockchain[i])){
