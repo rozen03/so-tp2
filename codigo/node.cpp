@@ -28,19 +28,32 @@ struct Block {
 //Si nos separan más de VALIDATION_BLOCKS bloques de distancia entre las cadenas, se descarta por seguridad
 bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 	//TODO: Enviar mensaje TAG_CHAIN_HASH
-	MPI_Send(rBlock, 1, *MPI_BLOCK, rBlock->node_owner_number, TAG_CHAIN_HASH, MPI_COMM_WORLD);
+	MPI_Send(rBlock, 1, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_HASH, MPI_COMM_WORLD);
 	Block *blockchain = new Block[VALIDATION_BLOCKS];
 
 	//TODO: Recibir mensaje TAG_CHAIN_RESPONSE
-	// MPI_Send(rblock, 1, *MPI_BLOCK, rBlock->node_owner_number, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD);
+	MPI_Status sttatus;
+	MPI_Recv(blockchain, VALIDATION_BLOCKS, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD, &sttatus);
+	int countt;
+	MPI_Get_count(&sttatus,*MPI_BLOCK, &countt);
+	cout<<"RECIBI LA CAENA de tamanio: "<< countt<<endl;
 	//TODO: Verificar que los bloques recibidos
-	//sean válidos y se puedan acoplar a la cadena
-	//delete []blockchain;
-	//return true;
+	for (size_t i = 0; i < countt; i++) {
+		//sean válidos y se puedan acoplar a la cadena
+		if (valid_new_block(&blockchain[i])){
+			node_blocks[string(blockchain[i].block_hash)]=blockchain[i];
+		}else{
+			delete []blockchain;
+		 	return false;
+		}
+	}
+	last_block_in_chain = &blockchain[0];
+	delete []blockchain;
+	return true;
 
 
- 	delete []blockchain;
- 	return false;
+ // 	delete []blockchain;
+ // 	return false;
 }
 
 //Verifica que el bloque tenga que ser incluido en la cadena, y lo agrega si corresponde
@@ -62,7 +75,7 @@ bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
 	//TODO: Si el índice del bloque recibido es
 	//el siguiente a mí último bloque actual,
 	//y el bloque anterior apuntado por el recibido es mí último actual,
-	if(rBlock->index == (last_block_in_chain->index + 1) && strcmp(rBlock->previous_block_hash,last_block_in_chain->block_hash) ){
+	if(rBlock->index == (last_block_in_chain->index + 1) && strcmp(rBlock->previous_block_hash,last_block_in_chain->block_hash)==0 ){
 	//entonces lo agrego como nuevo último.
 		last_block_in_chain=(Block *)rBlock;
 	  printf("[%d] Agregado a la lista bloque con index %d enviado por %d \n", mpi_rank, rBlock->index,status->MPI_SOURCE);
@@ -72,7 +85,7 @@ bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
 	//el siguiente a mí último bloque actual,
 	//pero el bloque anterior apuntado por el recibido no es mí último actual,
 	//----------------------------------------------------------V esto seguramente sea innecesario, despues diganme si los saco
-	if(rBlock->index == (last_block_in_chain->index + 1) && !strcmp(rBlock->previous_block_hash,last_block_in_chain->block_hash) ){
+	if(rBlock->index == (last_block_in_chain->index + 1) && !strcmp(rBlock->previous_block_hash,last_block_in_chain->block_hash)!=0){
 	//entonces hay una blockchain más larga que la mía.
 	  printf("[%d] Perdí la carrera por uno (%d) contra %d \n", mpi_rank, rBlock->index, status->MPI_SOURCE);
 	  bool res = verificar_y_migrar_cadena(rBlock,status);
@@ -171,6 +184,16 @@ void* proof_of_work(void *ptr){
 
 void mandar_cadena(const Block *rBlock, const MPI_Status *status){
 	// last_block_in_chain->
+	int size= min(VALIDATION_BLOCKS,(int)rBlock->index);
+	Block *blockchain = new Block[size];
+	Block * block=(Block *)rBlock;
+	for (size_t i = 0; i < size; i++) {
+		blockchain[i]= node_blocks[block->previous_block_hash];
+		block =&node_blocks[block->previous_block_hash];
+	}
+	MPI_Send(blockchain, size, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD);
+	cout<<"MANDE LA CAENA"<<endl;
+	//mandar los bloques en orden inverso asi despues "alice" puede fijarse en orden si lesirve
 }
 
 int node(){
