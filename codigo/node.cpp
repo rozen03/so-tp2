@@ -36,11 +36,13 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 	MPI_Recv(blockchain, VALIDATION_BLOCKS, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD, &sttatus);
 	int countt;
 	MPI_Get_count(&sttatus,*MPI_BLOCK, &countt);
-	cout<<"RECIBI LA CAENA de tamanio: "<< countt<<endl;
+	// cout<<"RECIBI LA CAENA de tamanio: "<< countt<<endl;
 	//TODO: Verificar que los bloques recibidos
 	//sean válidos y se puedan acoplar a la cadena
 	//El primer bloque de la lista contiene el hash pedido y el mismo index que el bloque original.
 	if(blockchain[0].index != rBlock->index || strcmp(blockchain[0].block_hash,rBlock->block_hash)!= 0){
+		printf("[%d] %d me dio basura \n", mpi_rank, status->MPI_SOURCE);
+		cout<<"LO INICE FUERON: "<<blockchain[0].index <<" " <<rBlock->index;
 		delete []blockchain;
 		return false;
 	}
@@ -73,7 +75,7 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 			break;
 		}
 	}
-	if(!hayAlguno){
+	if(!hayAlguno && blockchain[countt-1].index!=1){
 		delete []blockchain;
 		return false;
 	}
@@ -180,7 +182,11 @@ void* proof_of_work(void *ptr){
 	unsigned int mined_blocks = 0;
 	while(true){
 
-
+		bool expected = false;
+		while (!probando.compare_exchange_weak(expected, true) && !expected){
+			cout<<"soy un boludo esperando"<<endl;
+		}
+		// cout<<"no espere nada lalalala"<<endl;
 		block = *last_block_in_chain;
 
 		//Preparar nuevo bloque
@@ -194,10 +200,9 @@ void* proof_of_work(void *ptr){
 
 		//Hashear el contenido (con el nuevo nonce)
 		block_to_hash(&block,hash_hex_str);
-		if(probando){
-			continue;
-		}
-		probando=true;
+		// if(probando){
+			// continue;
+		// }
 		//Contar la cantidad de ceros iniciales (con el nuevo nonce)
 		if(solves_problem(hash_hex_str)){
 
@@ -225,12 +230,13 @@ void mandar_cadena(const Block *rBlock, const MPI_Status *status){
 	int size= min(VALIDATION_BLOCKS,(int)rBlock->index);
 	Block *blockchain = new Block[size];
 	Block * block=(Block *)rBlock;
-	for (size_t i = 0; i < size; i++) {
+	blockchain[0]=*block;
+	for (size_t i = 1; i < size; i++) {
 		blockchain[i]= node_blocks[block->previous_block_hash];
 		block =&node_blocks[block->previous_block_hash];
 	}
 	MPI_Send(blockchain, size, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD);
-	cout<<"MANDE LA CAENA"<<endl;
+	// cout<<"MANDE LA CAENA"<<endl;
 	//mandar los bloques en orden inverso asi despues "alice" puede fijarse en orden si lesirve
 }
 
@@ -259,8 +265,7 @@ int node(){
 	while(true){
 		Block *  block = new Block;
 		//TODO: Recibir mensajes de otros nodos
-		while(probando){//  cout<<"ESPERO"<<endl;
-		}
+
 		MPI_Status status;
 		MPI_Recv(block, 1, *MPI_BLOCK,  MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		//   cout<<"Recibí "<<block.node_owner_number<<endl;
@@ -270,11 +275,17 @@ int node(){
 			//TODO: Si es un mensaje de nuevo bloque, llamar a la función
 			// validate_block_for_chain con el bloque recibido y el estado de MPI
 			// cout<<"TENGO UN NIU BLOQ"<<endl;
+			bool expected = false;
+			while (!probando.compare_exchange_weak(expected, true) && !expected){
+				cout<<"soy una boluda esperando"<<endl;
+			}
+
 			validate_block_for_chain(block, &status);
+			probando=false;
 		}else if(tag==TAG_CHAIN_HASH){
 			//TODO: Si es un mensaje de pedido de cadena,
 			//responderlo enviando los bloques correspondientes
-			cout<<"LE MANDO LA CAENA"<<endl;
+			// cout<<"LE MANDO LA CAENA"<<endl;
 			mandar_cadena(block, &status);
 		}
 	}
