@@ -38,17 +38,49 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 	MPI_Get_count(&sttatus,*MPI_BLOCK, &countt);
 	cout<<"RECIBI LA CAENA de tamanio: "<< countt<<endl;
 	//TODO: Verificar que los bloques recibidos
-	if (blockchain[0].index != rBlock->index || strcmp(blockchain[0].block_hash,rBlock->block_hash)!= 0){
+	//sean válidos y se puedan acoplar a la cadena
+	//El primer bloque de la lista contiene el hash pedido y el mismo index que el bloque original.
+	if(blockchain[0].index != rBlock->index || strcmp(blockchain[0].block_hash,rBlock->block_hash)!= 0){
+		delete []blockchain;
+		return false;
+	}
+	// El hash del bloque recibido es igual al calculado por la función block_to_hash.
+	if(strcmp(block_to_hash(blockchain[0]),blockchain[0].block_hash) !=0){
+		delete []blockchain;
+		return false;
+	}
+
+	for (size_t i = 0; i < countt-1; i++) {
+		//Cada bloque siguiente de la lista, contiene el hash definido en previous_block_hash del
+		//actual elemento.
+		if(strcmp(blockchain[i].previous_block_hash,blockchain[i+1].block_hash) != 0){
+			delete []blockchain;
+		 	return false;
+		}
+		//Cada bloque siguiente de la lista, contiene el índice anterior al actual elemento.
+		if((blockchain[i].index == blockchain[i+1].index+1){
+			delete []blockchain;
+			return false;
+		}
+	}
+
+	bool hayAlguno=false;
+	for (size_t i = 0; i < countt; i++) {
+		if (node_blocks.find([blockchain[i].block_hash) != node_blocks.end()){
+			hayAlguno=true;
+			break;
+		}
+	}
+	if(!hayAlguno){
 		delete []blockchain;
 		return false;
 	}
 	for (size_t i = 0; i < countt; i++) {
-		//sean válidos y se puedan acoplar a la cadena
 		if (valid_new_block(&blockchain[i])){
 			node_blocks[string(blockchain[i].block_hash)]=blockchain[i];
 		}else{
 			delete []blockchain;
-		 	return false;
+			return false;
 		}
 	}
 	last_block_in_chain = &blockchain[0];
