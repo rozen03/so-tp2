@@ -172,8 +172,9 @@ void broadcast_block(const Block *block){
 		dest=i%total_nodes;
 		// cout<<"soy "<<mpi_rank<<" voy a mandarle bloque a "<<dest<<endl;
 		// cout<<"Mando: "<<block->index<<endl;
-		// printf("[%d] mando bloque a: [%d]\n",mpi_rank,dest);
+		printf("[%d] mando bloque a: [%d]\n",mpi_rank,dest);
 		MPI_Send(block, 1, *MPI_BLOCK, dest, TAG_NEW_BLOCK, MPI_COMM_WORLD);
+		printf("[%d] mande bloque a: [%d]\n",mpi_rank,dest);
 	}
 }
 
@@ -186,8 +187,9 @@ void* proof_of_work(void *ptr){
 	while(true){
 
 		bool expected = false;
-		while (!probando.compare_exchange_weak(expected, true) && !expected){
-			cout<<"soy un boludo esperando"<<endl;
+		while (!probando.compare_exchange_weak(expected, true)){
+			printf("soy un boludo esperando");
+			expected = false;
 		}
 		// cout<<"no espere nada lalalala"<<endl;
 		block = *last_block_in_chain;
@@ -236,14 +238,10 @@ void mandar_cadena(const Block *rBlock, const MPI_Status *status){
 	Block *blockchain = new Block[size];
 	Block * block=(Block *)rBlock;
 	blockchain[0]=*block;
-	cout<<mpi_rank <<"mande ";
-	cout<<0;
 	for (size_t i = 1; i < size; i++) {
-		cout<<" "<<i<<" ";
 		blockchain[i]= node_blocks[block->previous_block_hash];
 		block =&node_blocks[block->previous_block_hash];
 	}
-	cout<<"cosas"<<endl;
 	MPI_Send(blockchain, size, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD);
 	// cout<<"MANDE LA CAENA"<<endl;
 	//mandar los bloques en orden inverso asi despues "alice" puede fijarse en orden si lesirve
@@ -279,15 +277,17 @@ int node(){
 		MPI_Recv(block, 1, *MPI_BLOCK,  MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		//   cout<<"Recibí "<<block.node_owner_number<<endl;
 		// cout<<"Recibí "<<status.MPI_SOURCE<<" "<<status.MPI_TAG<<endl;
+		printf("[%d]  me llego un bloqueh de [%d]  \n",mpi_rank,status.MPI_SOURCE);
 		auto tag= status.MPI_TAG;
+		bool expected = false;
+		while (!probando.compare_exchange_weak(expected, true)){
+			// printf("soy una boluda esperando\n");
+		}
 		if (tag ==TAG_NEW_BLOCK){
 			//TODO: Si es un mensaje de nuevo bloque, llamar a la función
 			// validate_block_for_chain con el bloque recibido y el estado de MPI
 			// cout<<"TENGO UN NIU BLOQ"<<endl;
-			bool expected = false;
-			while (!probando.compare_exchange_weak(expected, true) && !expected){
-				cout<<"soy una boluda esperando"<<endl;
-			}
+
 			// printf("[%d]  me llego un bloqueh \n",mpi_rank);
 			validate_block_for_chain(block, &status);
 			probando=false;
