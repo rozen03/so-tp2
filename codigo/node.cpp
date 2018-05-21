@@ -34,9 +34,9 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 	//TODO: Recibir mensaje TAG_CHAIN_RESPONSE
 	MPI_Status sttatus;
 	MPI_Recv(blockchain, VALIDATION_BLOCKS, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD, &sttatus);
-	int countt;
-	MPI_Get_count(&sttatus,*MPI_BLOCK, &countt);
-	// cout<<"RECIBI LA CAENA de tamanio: "<< countt<<endl;
+	int count;
+	MPI_Get_count(&sttatus,*MPI_BLOCK, &count);
+	uint countt = (uint) count;
 	//TODO: Verificar que los bloques recibidos
 	//sean válidos y se puedan acoplar a la cadena
 	//El primer bloque de la lista contiene el hash pedido y el mismo index que el bloque original.
@@ -81,6 +81,7 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 	}
 	for (size_t i = 0; i < countt; i++) {
 		if (valid_new_block(&blockchain[i])){
+			// cout<<mpi_rank<<": CHE ME LLEGO UN bLOQUE DE NUMERO "<<blockchain[i].index<<endl;
 			node_blocks[string(blockchain[i].block_hash)]=blockchain[i];
 		}else{
 			delete []blockchain;
@@ -88,7 +89,8 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 		}
 	}
 	last_block_in_chain = &blockchain[0];
-	delete []blockchain;
+	// cout<<"ahora mi index es"<<last_block_in_chain->index<<endl;
+	// delete []blockchain; no descomentar esto, si borramos el array se queda basura en los bloques
 	return true;
 
 
@@ -136,7 +138,7 @@ bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
 	//TODO: Si el índice del bloque recibido es igua al índice de mi último bloque actual,
 	if(rBlock->index == last_block_in_chain->index){
 	//entonces hay dos posibles forks de la blockchain pero mantengo la mía
-		printf("[%d] Conflicto suave: Conflicto de branch (%d) contra %d \n",mpi_rank,rBlock->index,status->MPI_SOURCE);
+		printf("[%d] Conflicto suave: Conflicto de branch (%u) contra %u \n",mpi_rank,rBlock->index,status->MPI_SOURCE);
 		return false;
 	}
 
@@ -170,6 +172,7 @@ void broadcast_block(const Block *block){
 		dest=i%total_nodes;
 		// cout<<"soy "<<mpi_rank<<" voy a mandarle bloque a "<<dest<<endl;
 		// cout<<"Mando: "<<block->index<<endl;
+		// printf("[%d] mando bloque a: [%d]\n",mpi_rank,dest);
 		MPI_Send(block, 1, *MPI_BLOCK, dest, TAG_NEW_BLOCK, MPI_COMM_WORLD);
 	}
 }
@@ -190,6 +193,7 @@ void* proof_of_work(void *ptr){
 		block = *last_block_in_chain;
 
 		//Preparar nuevo bloque
+		// auto preindex = block.index;
 		block.index += 1;
 		block.node_owner_number = mpi_rank;
 		block.difficulty = DEFAULT_DIFFICULTY;
@@ -213,10 +217,11 @@ void* proof_of_work(void *ptr){
 				strcpy(last_block_in_chain->block_hash, hash_hex_str.c_str());
 				last_block_in_chain->created_at = static_cast<unsigned long int> (time(NULL));
 				node_blocks[hash_hex_str] = *last_block_in_chain;
-				printf("[%d] Agregué un producido con index %d \n",mpi_rank,last_block_in_chain->index);
+				printf("[%d] Agregué un producido con index %d\n",mpi_rank,last_block_in_chain->index);
 
 				//TODO: Mientras comunico, no responder mensajes de nuevos nodos
 				broadcast_block(last_block_in_chain);
+				printf("[%d]  Se los mande a todos genialmente \n",mpi_rank);
 			}
 		}
 		probando=false;
@@ -227,14 +232,18 @@ void* proof_of_work(void *ptr){
 
 void mandar_cadena(const Block *rBlock, const MPI_Status *status){
 	// last_block_in_chain->
-	int size= min(VALIDATION_BLOCKS,(int)rBlock->index);
+	uint size= min(VALIDATION_BLOCKS,(int)rBlock->index);
 	Block *blockchain = new Block[size];
 	Block * block=(Block *)rBlock;
 	blockchain[0]=*block;
+	cout<<mpi_rank <<"mande ";
+	cout<<0;
 	for (size_t i = 1; i < size; i++) {
+		cout<<" "<<i<<" ";
 		blockchain[i]= node_blocks[block->previous_block_hash];
 		block =&node_blocks[block->previous_block_hash];
 	}
+	cout<<"cosas"<<endl;
 	MPI_Send(blockchain, size, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD);
 	// cout<<"MANDE LA CAENA"<<endl;
 	//mandar los bloques en orden inverso asi despues "alice" puede fijarse en orden si lesirve
@@ -279,7 +288,7 @@ int node(){
 			while (!probando.compare_exchange_weak(expected, true) && !expected){
 				cout<<"soy una boluda esperando"<<endl;
 			}
-
+			// printf("[%d]  me llego un bloqueh \n",mpi_rank);
 			validate_block_for_chain(block, &status);
 			probando=false;
 		}else if(tag==TAG_CHAIN_HASH){
