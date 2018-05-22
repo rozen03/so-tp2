@@ -114,26 +114,22 @@ bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
 		return true;
 	}
 
-	//TODO: Si el índice del bloque recibido es
-	//el siguiente a mí último bloque actual,
-	//y el bloque anterior apuntado por el recibido es mí último actual,
-	if(rBlock->index == (last_block_in_chain->index + 1) && strcmp(rBlock->previous_block_hash,last_block_in_chain->block_hash)==0 ){
-	//entonces lo agrego como nuevo último.
-		last_block_in_chain=(Block *)rBlock;
-	  printf("[%d] Agregado a la lista bloque con index %d enviado por %d \n", mpi_rank, rBlock->index,status->MPI_SOURCE);
-	  return true;
+	//TODO: Si el índice del bloque recibido es el siguiente a mí último bloque actual,
+	if(rBlock->index == (last_block_in_chain->index + 1)){
+		//y el bloque anterior apuntado por el recibido es mí último actual,
+		if(strcmp(rBlock->previous_block_hash,last_block_in_chain->block_hash)==0){
+			//entonces lo agrego como nuevo último.
+			last_block_in_chain=(Block *)rBlock;
+			printf("[%d] Agregado a la lista bloque con index %d enviado por %d \n", mpi_rank, rBlock->index,status->MPI_SOURCE);
+			return true;
+		}else{
+			//pero el bloque anterior apuntado por el recibido no es mí último actual,
+			//entonces hay una blockchain más larga que la mía.
+			printf("[%d] Perdí la carrera por uno (%d) contra %d \n", mpi_rank, rBlock->index, status->MPI_SOURCE);
+			bool res = verificar_y_migrar_cadena(rBlock,status);
+			return res;
+		}
 	}
-	//TODO: Si el índice del bloque recibido es
-	//el siguiente a mí último bloque actual,
-	//pero el bloque anterior apuntado por el recibido no es mí último actual,
-	//----------------------------------------------------------V esto seguramente sea innecesario, despues diganme si los saco
-	if(rBlock->index == (last_block_in_chain->index + 1) && !strcmp(rBlock->previous_block_hash,last_block_in_chain->block_hash)!=0){
-	//entonces hay una blockchain más larga que la mía.
-	  printf("[%d] Perdí la carrera por uno (%d) contra %d \n", mpi_rank, rBlock->index, status->MPI_SOURCE);
-	  bool res = verificar_y_migrar_cadena(rBlock,status);
-	  return res;
-	}
-
 
 	//TODO: Si el índice del bloque recibido es igua al índice de mi último bloque actual,
 	if(rBlock->index == last_block_in_chain->index){
