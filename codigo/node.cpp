@@ -167,14 +167,16 @@ bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
 void broadcast_block(const Block *block){
   //No enviar a mí mismo
 	//mando desde el de la derecha en adelante, supongo q es un orden distinto... no?
+	//copio el bloque por que ya ni se
+	Block bloque = *block;
 	int dest;
 	for (int i = mpi_rank+1; i <total_nodes+mpi_rank ; ++i) {
 		dest=i%total_nodes;
 		// cout<<"soy "<<mpi_rank<<" voy a mandarle bloque a "<<dest<<endl;
 		// cout<<"Mando: "<<block->index<<endl;
-		printf("[%d] mando bloque a: [%d]\n",mpi_rank,dest);
-		MPI_Send(block, 1, *MPI_BLOCK, dest, TAG_NEW_BLOCK, MPI_COMM_WORLD);
-		printf("[%d] mande bloque a: [%d]\n",mpi_rank,dest);
+		// printf("[%d] mando bloque a: [%d]\n",mpi_rank,dest);
+		MPI_Send(&bloque, 1, *MPI_BLOCK, dest, TAG_NEW_BLOCK, MPI_COMM_WORLD);
+		// printf("[%d] mande bloque a: [%d]\n",mpi_rank,dest);
 	}
 }
 
@@ -184,11 +186,12 @@ void* proof_of_work(void *ptr){
 	string hash_hex_str;
 	Block block;
 	unsigned int mined_blocks = 0;
+	auto pid =getpid();
 	while(true){
 
 		bool expected = false;
 		while (!probando.compare_exchange_weak(expected, true)){
-			printf("soy un boludo esperando");
+			// printf("soy un boludo esperando");
 			expected = false;
 		}
 		// cout<<"no espere nada lalalala"<<endl;
@@ -219,11 +222,11 @@ void* proof_of_work(void *ptr){
 				strcpy(last_block_in_chain->block_hash, hash_hex_str.c_str());
 				last_block_in_chain->created_at = static_cast<unsigned long int> (time(NULL));
 				node_blocks[hash_hex_str] = *last_block_in_chain;
-				printf("[%d] Agregué un producido con index %d\n",mpi_rank,last_block_in_chain->index);
+				printf("[%d][%d] Agregué un producido con index %d\n",mpi_rank,pid,last_block_in_chain->index);
 
 				//TODO: Mientras comunico, no responder mensajes de nuevos nodos
 				broadcast_block(last_block_in_chain);
-				printf("[%d]  Se los mande a todos genialmente \n",mpi_rank);
+				printf("[%d][%d]  Se los mande a todos genialmente \n",mpi_rank,pid);
 			}
 		}
 		probando=false;
@@ -249,6 +252,7 @@ void mandar_cadena(const Block *rBlock, const MPI_Status *status){
 
 int node(){
 	probando=false;
+
 	//Tomar valor de mpi_rank y de nodos totales
 	MPI_Comm_size(MPI_COMM_WORLD, &total_nodes);
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
@@ -268,7 +272,7 @@ int node(){
 	//TODO: Crear thread para minar
 	pthread_t thread;
 	pthread_create(&thread, NULL, proof_of_work, NULL);
-	//otro dia
+	auto pid =getpid();
 	while(true){
 		Block *  block = new Block;
 		//TODO: Recibir mensajes de otros nodos
@@ -277,18 +281,20 @@ int node(){
 		MPI_Recv(block, 1, *MPI_BLOCK,  MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		//   cout<<"Recibí "<<block.node_owner_number<<endl;
 		// cout<<"Recibí "<<status.MPI_SOURCE<<" "<<status.MPI_TAG<<endl;
-		printf("[%d]  me llego un bloqueh de [%d]  \n",mpi_rank,status.MPI_SOURCE);
 		auto tag= status.MPI_TAG;
-		bool expected = false;
-		while (!probando.compare_exchange_weak(expected, true)){
-			// printf("soy una boluda esperando\n");
-		}
+		printf("[%d][%d]  me llego un bloqueh de [%d] con tag [%d]  \n",mpi_rank,pid,status.MPI_SOURCE,tag);
+
 		if (tag ==TAG_NEW_BLOCK){
 			//TODO: Si es un mensaje de nuevo bloque, llamar a la función
 			// validate_block_for_chain con el bloque recibido y el estado de MPI
 			// cout<<"TENGO UN NIU BLOQ"<<endl;
-
+			bool expected = false;
+			while (!probando.compare_exchange_weak(expected, true)){
+				// printf("[%d][%d]soy una boluda esperando\n",mpi_rank,pid);
+				 expected = false;
+			}
 			// printf("[%d]  me llego un bloqueh \n",mpi_rank);
+
 			validate_block_for_chain(block, &status);
 			probando=false;
 		}else if(tag==TAG_CHAIN_HASH){
