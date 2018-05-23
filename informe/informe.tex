@@ -1,0 +1,82 @@
+\documentclass[10pt, a4paper, hidelinks]{article}
+\usepackage[paper=a4paper, left=2cm, right=2cm, bottom=2cm, top=3cm]{geometry} %ajustar márgnens
+\usepackage[latin1]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{caratula}
+\usepackage{enumitem} 
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage[font=small,labelfont=bf]{caption}
+\newcommand\floor[1]{\lfloor#1\rfloor}
+\newcommand\ceil[1]{\lceil#1\rceil}
+%\usepackage{clrscode3e} Estilo Cormen
+\usepackage[spanish,onelanguage,ruled,vlined,nofillcomment]{algorithm2e}
+\usepackage{algpseudocode}
+\usepackage{xcolor}
+\usepackage[final]{pdfpages} % para agregar el enunciado
+%%%%%%%%%%%%%% Formato de párrafos %%%%%%%%%%%%%%%%%%
+\setlength{\parindent}{2em}
+\setlength{\parskip}{3pt}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\setlength{\intextsep}{0.2cm}
+\pagestyle{fancy}
+\lhead{Sistemas Operativos}
+\rhead{$1^{\mathrm{er}}$ cuatrimestre de 2018}
+
+\LinesNumbered
+\DontPrintSemicolon
+
+\newcommand{\comp}[1]{$\mathcal{O}(#1)$}
+
+%%%%%%%%%%%%%%%%%%% Macro para comentar codigo %%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\comentario}[1]{
+\SetKwComment{Comment}{/* }{ */}
+\textcolor{blue}{\Comment*[h]{{#1}}}
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\materia{Sistemas Operativos}
+\submateria{Primer cuatrimestre del 2018}
+\titulo{Trabajo Práctico 2: \texttt{blockchain}}
+\integrante{Budiño, Gabriel Fabricio}{046/16}{gabriel.f.budi@gmail.com} % obligatorio 
+\integrante{Garro, Damián Eugenio}{354/16}{damian.garro.mst@gmail.com} % obligatorio 
+\integrante{Rozenberg, Uriel Jonathan}{838/12}{rozenberguriel@gmail.com} % obligatorio 
+
+\maketitle
+
+\tableofcontents
+\pagenumbering{gobble}
+
+\pagebreak
+\pagenumbering{arabic}
+\cfoot{\thepage /\pageref{LastPage}}
+
+\section{Introducción}
+
+\section{Resolución}
+\subsection{Ejercicio 1}
+
+\subsection{Ejercicio 2}
+
+\subsection{Ejercicio 3}
+
+\subsection{Ejercicio 4}
+
+\subsection{Ejercicio 5
+}
+\section{Experimentación}
+
+
+\newpage
+\includepdf[scale=0.75,pages=1,pagecommand=\section{Apéndices}
+\subsection{Apéndice A - Enunciado}]{../enunciado.pdf}
+\includepdf[scale=0.75,pages=2-,pagecommand=]{../enunciado.pdf}
+
+\subsection{Apéndice B - Aclaraciones}
+
+\end{document}
+
