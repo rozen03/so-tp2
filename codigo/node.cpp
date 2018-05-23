@@ -31,7 +31,7 @@ void printCasos(){
 	printf("[%d] Casos 0:%d 1:%d 2:%d 3:%d 4:%d 5:%d 6:%d \n",mpi_rank,casos[0],casos[1],casos[2],casos[3],casos[4],casos[5],casos[6]);
 }
 bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
-	printf("[%d] Entre bien", mpi_rank);
+	// printf("[%d] Entre bien", mpi_rank);
 	//TODO: Enviar mensaje TAG_CHAIN_HASH
 	MPI_Send(rBlock, 1, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_HASH, MPI_COMM_WORLD);
 	Block *blockchain = new Block[VALIDATION_BLOCKS];
@@ -96,7 +96,7 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 	last_block_in_chain = &blockchain[0];
 	// cout<<"ahora mi index es"<<last_block_in_chain->index<<endl;
 	// delete []blockchain; no descomentar esto, si borramos el array se queda basura en los bloques
-		printf("[%d] Sali bien", mpi_rank);
+		// printf("[%d] Sali bien", mpi_rank);
 	return true;
 
 
