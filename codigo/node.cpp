@@ -79,14 +79,8 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 		}
 	}
 	last_block_in_chain = &blockchain[0];
-	// cout<<"ahora mi index es"<<last_block_in_chain->index<<endl;
 	// delete []blockchain; no descomentar esto, si borramos el array se queda basura en los bloques
-		// printf("[%d] Sali bien", mpi_rank);
 	return true;
-
-
- // 	delete []blockchain;
- // 	return false;
 
 }
 
@@ -170,7 +164,15 @@ void broadcast_block(const Block *block){
 		 printf("[%d] mande bloque a: [%d]\n",mpi_rank,dest);
 	}
 }
-
+void lock(){
+	bool expected = false;
+	while (!probando.compare_exchange_weak(expected, true)){
+		expected = false;
+	}
+}
+void unlock(){
+	probando=false;
+}
 //Proof of work
 //TODO: Advertencia: puede tener condiciones de carrera
 void* proof_of_work(void *ptr){
@@ -192,21 +194,13 @@ void* proof_of_work(void *ptr){
 
 		//Agregar un nonce al azar al bloque para intentar resolver el problema
 		gen_random_nonce(block.nonce);
-
 		//Hashear el contenido (con el nuevo nonce)
 		block_to_hash(&block,hash_hex_str);
-		// if(probando){
-			// continue;
-		// }
 		//Contar la cantidad de ceros iniciales (con el nuevo nonce)
 		if(solves_problem(hash_hex_str)){
 			//Verifico que no haya cambiado mientras calculaba
 			if(last_block_in_chain->index < block.index){
-				bool expected = false;
-				while (!probando.compare_exchange_weak(expected, true)){
-					// printf("soy un boludo esperando");
-					expected = false;
-				}
+				lock();
 				printf("[%d][tid:%d]voy\n",mpi_rank,tid);
 				mined_blocks += 1;
 				*last_block_in_chain = block;
@@ -219,7 +213,7 @@ void* proof_of_work(void *ptr){
 				broadcast_block(last_block_in_chain);
 				// printf("[%d][%d]  Se los mande a todos genialmente \n",mpi_rank,pid);
 			}
-			probando=false;
+			unlock();
 			printf("[%d][tid:%d]vuelvo\n",mpi_rank,tid);
 		}
 
@@ -229,7 +223,6 @@ void* proof_of_work(void *ptr){
 }
 
 void mandar_cadena(const Block *rBlock, const MPI_Status *status){
-	// last_block_in_chain->
 	uint size= min(VALIDATION_BLOCKS,(int)rBlock->index);
 	Block *blockchain = new Block[size];
 	Block * block=(Block *)rBlock;
@@ -278,12 +271,9 @@ int node(){
 		if (tag ==TAG_NEW_BLOCK){
 			//TODO: Si es un mensaje de nuevo bloque, llamar a la función
 			// validate_block_for_chain con el bloque recibido y el estado de MPI
-			bool expected = false;
-			while (!probando.compare_exchange_weak(expected, true)){
-				 expected = false;
-			}
+			lock();
 			validate_block_for_chain(block, &status);
-			probando=false;
+			unlock();
 		}else if(tag==TAG_CHAIN_HASH){
 			//TODO: Si es un mensaje de pedido de cadena,
 			//responderlo enviando los bloques correspondientes
