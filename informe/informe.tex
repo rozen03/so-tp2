@@ -78,7 +78,57 @@ La función \texttt{broadcast\_block} es la encargada de comunicar al resto de lo
 Para referenciar a un proceso ($nodo$) usamos su \texttt{rank} dentro del communicator global \texttt{MPI\_COMM\_WORLD}. Contamos con las variables \texttt{mpi\_rank} y \texttt{total\_nodes}. Así, para cada \texttt{mpi\_rank} + 1 $\leq i \leq$ \texttt{mpi\_rank} + \texttt{total\_nodes}, definimos $destino$ como $i$ $mod$ \texttt{total\_nodes} y enviamos el mensaje usando \texttt{MPI\_Send} con $destino$, $bloque$ y el tag \texttt{TAG\_NEW\_BLOCK} como parámetros.
  
 \subsection{Ejercicio 2}
-\textbf{TODO: Resumen ejercicio 2. Lo pase por ahora porque lo estaban modificando}
+Para la resulución de este ejercicio, se agregó a la información que mantiene cada nodo un bool atómico \texttt{probando}. Además, se implementaron las funciones \texttt{lock} y \texttt{unlock} como se muestran a continuación:
+
+\begin{algorithm}[H]
+\SetKwProg{Fn}{Función}{}{fin}
+\SetAlgoLined
+\Fn{lock()}{
+	$expected$ $\leftarrow$ \texttt{false} \\
+	\While{$\lnot$ \texttt{probando}.compare\_exchange\_weak($expected$, \texttt{true})}{
+		$expected$ $\leftarrow$ \texttt{false}
+	}
+}
+\caption{\texttt{lock}}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\SetKwProg{Fn}{Función}{}{fin}
+\SetAlgoLined
+\Fn{unlock()}{
+	\texttt{probando} $\leftarrow$ \texttt{false}
+}
+\caption{\texttt{unlock}}
+\end{algorithm}
+
+A continuación, se muestra el pseudocódigo de la parte implementada como parte del trabajo del método \texttt{node}:
+
+\begin{algorithm}[H]
+\SetKwProg{Fn}{Función}{}{fin}
+\SetAlgoLined
+\Fn{node()}{
+	\comentario{Tomar valor de mpi\_rank y de total\_nodes} \\
+	\comentario{Inicialización del primer bloque} \\
+	\comentario{Crear thread para minar} \\
+	crear nuevo thread con la función \texttt{proof\_of\_work} como punto de inicio \\
+	\While{\texttt{true}}{
+		$block$ $\leftarrow$ nuevo bloque \\
+		\comentario{Recibir mensajes de otros nodos} \\
+		$status$ $\leftarrow$ \texttt{MPI\_Recv($block$)} \\
+		\comentario{Si es un mensaje de nuevo bloque} \\
+		\If{status.tag = \texttt{TAG\_NEW\_BLOCK}}{
+			\texttt{lock} \\
+			\texttt{validate\_block\_for\_chain}($block$, $status$) \\
+			\texttt{unlock}		
+		} \comentario{Si es un mensaje de pedido de cadena} \\ 
+		\ElseIf{status.tag = TAG\_CHAIN\_HASH}{
+			\texttt{mandar\_cadena}($block$, $status$) \\		
+		}	
+	}
+}
+\caption{\texttt{node}}
+\end{algorithm}
+
 \subsection{Ejercicio 3}
 Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir si agregarlo o no a la cadena. Para eso se utiliza la función \texttt{validate\_block\_for\_chain}, la cual debía cumplir con el consenso definido en el enunciado. Su pseudocódigo es el siguiente:
 
