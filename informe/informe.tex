@@ -62,7 +62,21 @@ A continuación se presenta un breve resumén de la resolución de cada ejercicio a
 
 \section{Resolución}
 \subsection{Ejercicio 1}
+La función \texttt{broadcast\_block} es la encargada de comunicar al resto de los nodos que se ha minado un bloque. El pseudocódigo de la misma es el siguiente:
 
+\begin{algorithm}[H]
+\SetKwProg{Fn}{Función}{}{fin}
+\SetAlgoLined
+\Fn{broadcast\_block(bloque)}{
+	\ForEach{nodo n distinto del comunicador}{
+		enviar(bloque, n) \\
+	}
+}
+\caption{\texttt{broadcast\_block}}
+\end{algorithm}
+
+Para referenciar a un proceso ($nodo$) usamos su \texttt{rank} dentro del communicator global \texttt{MPI\_COMM\_WORLD}. Contamos con las variables \texttt{mpi\_rank} y \texttt{total\_nodes}. Así, para cada \texttt{mpi\_rank} + 1 $\leq i \leq$ \texttt{mpi\_rank} + \texttt{total\_nodes}, definimos $destino$ como $i$ $mod$ \texttt{total\_nodes} y enviamos el mensaje usando \texttt{MPI\_Send} con $destino$, $bloque$ y el tag \texttt{TAG\_NEW\_BLOCK} como parámetros.
+ 
 \subsection{Ejercicio 2}
 
 \subsection{Ejercicio 3}
