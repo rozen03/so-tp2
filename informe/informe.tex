@@ -80,7 +80,49 @@ Para referenciar a un proceso ($nodo$) usamos su \texttt{rank} dentro del commun
 \subsection{Ejercicio 2}
 
 \subsection{Ejercicio 3}
+Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir si agregarlo o no a la cadena. Para eso se utiliza la función \texttt{validate\_block\_for\_chain}, la cual debía cumplir con el consenso definido en el enunciado. Su pseudocódigo es el siguiente:
 
+\begin{algorithm}[H]
+\SetKwProg{Fn}{Función}{}{fin}
+\SetAlgoLined
+\Fn{validate\_block\_for\_chain(rBlock, status)}{
+	agrego $rBlock$ al diccionario \\
+	\comentario{1er item del consenso} \\
+	\If{\texttt{valid\_new\_block(rBlock)}}{
+		\comentario{2do item del consenso} \\
+		\If{rBlock.indice = 1 y \texttt{last\_block\_in\_chain}.indice = 0}{
+			\texttt{last\_block\_in\_chain} $\leftarrow$ $rBlock$ \\
+			devolver \texttt{true}
+		}
+		\If{rBlock.indice = \texttt{last\_block\_in\_chain}.indice + 1}{
+			\comentario{3er item del consenso} \\
+			\If{anteior de rBlock = anterior de \texttt{last\_block\_in\_chain}}{
+				\texttt{last\_block\_in\_chain} $\leftarrow$ $rBlock$ \\
+				devolver \texttt{true} \\			
+			} \comentario{4to item del consenso} \\ 
+			\Else {
+				$res$ $\leftarrow$ \texttt{verificar\_y\_migrar\_cadena}($rBlock$, $status$) \\
+				devolver $res$
+			}
+		}
+		\comentario{5to item del consenso} \\
+		\If{rBlock.indice = \texttt{last\_block\_in\_chain}.indice}{
+			devolver \texttt{false}		
+		}
+		\If{rBlock.indice $<$ \texttt{last\_block\_in\_chain}.indice}{
+			devolver \texttt{false}		
+		}
+		\comentario{6to item del consenso} \\
+		\If{rBlock.indice $>$ \texttt{last\_block\_in\_chain}.indice}{
+			$res$ $\leftarrow$ \texttt{verificar\_y\_migrar\_cadena}($rBlock$, $status$) \\
+			devolver $res$	
+		}
+	}
+}
+\caption{\texttt{validate\_block\_for\_chain}}
+\end{algorithm}
+
+ 
 \subsection{Ejercicio 4}
 
 \subsection{Ejercicio 5
