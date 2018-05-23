@@ -9,10 +9,12 @@
 #include <mpi.h>
 #include <map>
 #include <unistd.h>
+#include <mutex>
 int total_nodes, mpi_rank;
 Block *last_block_in_chain;
 map<string,Block> node_blocks;
 atomic<bool> probando;
+mutex mutexx;
 //Cuando me llega una cadena adelantada, y tengo que pedir los nodos que me faltan
 //Si nos separan más de VALIDATION_BLOCKS bloques de distancia entre las cadenas, se descarta por seguridad
 
@@ -155,23 +157,34 @@ void broadcast_block(const Block *block){
 	//mando desde el de la derecha en adelante, supongo q es un orden distinto... no?
 	//copio el bloque por que ya ni se
 	const Block *bloque = block;
-	printf("[%d]la direccion del bloque es[%p][%p],\n",mpi_rank,block,&block);
 	int dest;
-	for (int i = mpi_rank+1; i <total_nodes+mpi_rank ; ++i) {
-		dest=i%total_nodes;
-		 printf("[%d] mando bloque a: [%d]\n",mpi_rank,dest);
-		MPI_Send(bloque, 1, *MPI_BLOCK, dest, TAG_NEW_BLOCK, MPI_COMM_WORLD);
-		 printf("[%d] mande bloque a: [%d]\n",mpi_rank,dest);
+	for (int i =0; i <total_nodes; ++i) {
+		dest=(mpi_rank+i)%total_nodes;
+		dest = i;
+		if (i==mpi_rank){
+			continue;
+		}
+		//  printf("[%d] mando bloque a: [%d]\n",mpi_rank,dest);
+		MPI_Bsend(bloque, 1, *MPI_BLOCK, dest, TAG_NEW_BLOCK, MPI_COMM_WORLD);
+		//  printf("[%d] mande bloque a: [%d]\n",mpi_rank,dest);
 	}
 }
 void lock(){
-	bool expected = false;
-	while (!probando.compare_exchange_weak(expected, true)){
-		expected = false;
-	}
+	// bool expected = false;
+	// while (!probando.compare_exchange_weak(expected, true)){
+		// expected = false;
+	// }
+	// auto pid =getpid();
+	// auto tid = pthread_self();
+	// printf("[%d][%d][%d]Entre!!\n",mpi_rank,pid,tid);
+	mutexx.lock();
 }
 void unlock(){
-	probando=false;
+	// probando=false;
+	// auto pid =getpid();
+	// auto tid = pthread_self();
+	// printf("[%d][%d][%d]Sali!!\n",mpi_rank,pid,tid);
+	mutexx.unlock();
 }
 //Proof of work
 //TODO: Advertencia: puede tener condiciones de carrera
@@ -199,22 +212,20 @@ void* proof_of_work(void *ptr){
 		//Contar la cantidad de ceros iniciales (con el nuevo nonce)
 		if(solves_problem(hash_hex_str)){
 			//Verifico que no haya cambiado mientras calculaba
+			lock();
 			if(last_block_in_chain->index < block.index){
-				lock();
-				printf("[%d][tid:%d]voy\n",mpi_rank,tid);
 				mined_blocks += 1;
 				*last_block_in_chain = block;
 				strcpy(last_block_in_chain->block_hash, hash_hex_str.c_str());
 				last_block_in_chain->created_at = static_cast<unsigned long int> (time(NULL));
 				node_blocks[hash_hex_str] = *last_block_in_chain;
-				printf("[%d][%d] Agregué un producido con index %d\n",mpi_rank,pid,last_block_in_chain->index);
+				printf("[%d][%d][%d] Agregué un producido con index %d\n",mpi_rank,pid,tid,last_block_in_chain->index);
 
 				//TODO: Mientras comunico, no responder mensajes de nuevos nodos
 				broadcast_block(last_block_in_chain);
 				// printf("[%d][%d]  Se los mande a todos genialmente \n",mpi_rank,pid);
 			}
 			unlock();
-			printf("[%d][tid:%d]vuelvo\n",mpi_rank,tid);
 		}
 
 	}
