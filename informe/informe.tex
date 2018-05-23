@@ -129,6 +129,9 @@ A continuación, se muestra el pseudocódigo de la parte implementada como parte d
 \caption{\texttt{node}}
 \end{algorithm}
 
+En cuanto a la función \texttt{proof\_of\_work}, una vez que se consigue la cantidad de ceros requerida por la dificultad configurada, se ejecuta un bloque que inicialmente verifica que no haya cambiado \texttt{last\_block\_in\_chain} y finalmente llama a \texttt{broadcast\_block} para comunicar que se ha minado un bloque. Consideramos estas dos acciones como los límites de la sección crítica, así que llamamos a \texttt{lock} inmediatamente antes de la primera y a \texttt{unlock} inmediatamente después de la segunda.
+
+\textbf{TODO: hablar de race conditions}  
 \subsection{Ejercicio 3}
 Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir si agregarlo o no a la cadena. Para eso se utiliza la función \texttt{validate\_block\_for\_chain}, la cual debía cumplir con el consenso definido en el enunciado. Su pseudocódigo es el siguiente:
 
