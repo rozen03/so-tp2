@@ -1,0 +1,11 @@
+.vscode
+
+*.aux
+
+*.log
+
+*.out
+
+*.toc
+
+*.gz
