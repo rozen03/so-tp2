@@ -58,24 +58,24 @@
 \section{Introducción}
 Para este trabajo se debía implementar una cadena de bloques ($blockchain$) utilizando la interfaz MPI con el objetivo de desarrollar conocimientos en sistemas distribuidos.
 
-A continuación se presenta un breve resumén de la resolución de cada ejercicio así como de la experimentación realizada. El enunciado completo se encuentra en el Apéndice A.
+A continuación se presenta un breve resumén de la resolución de cada ejercicio así como de la experimentación realizada. El enunciado completo se encuentra en el Apéndice A, donde puede consultarse tanto la información de las estructuras usadas como los enunciados a los que responden las siguientes secciones del informe.
 
 \section{Resolución}
 \subsection{Ejercicio 1}
-La función \texttt{broadcast\_block} es la encargada de comunicar al resto de los nodos que se ha minado un bloque. El pseudocódigo de la misma es el siguiente:
+La función \texttt{broadcast\_block} es la encargada de, al momento en que un nodo mina exitosamente un bloque, comunicárselo al resto. El pseudocódigo de la misma es el siguiente:
 
 \begin{algorithm}[H]
 \SetKwProg{Fn}{Función}{}{fin}
 \SetAlgoLined
 \Fn{broadcast\_block(bloque)}{
-	\ForEach{nodo n distinto del comunicador}{
-		enviar(bloque, n) \\
+	\ForEach{nodo n distinto del productor del bloque}{
+		\texttt{MPI\_Send}($bloque$, $n.rank$, \texttt{TAG\_NEW\_BLOCK}) \\
 	}
 }
 \caption{\texttt{broadcast\_block}}
 \end{algorithm}
 
-Para referenciar a un proceso ($nodo$) usamos su \texttt{rank} dentro del communicator global \texttt{MPI\_COMM\_WORLD}. Contamos con las variables \texttt{mpi\_rank} y \texttt{total\_nodes}. Así, para cada \texttt{mpi\_rank} + 1 $\leq i \leq$ \texttt{mpi\_rank} + \texttt{total\_nodes}, definimos $destino$ como $i$ $mod$ \texttt{total\_nodes} y enviamos el mensaje usando \texttt{MPI\_Send} con $destino$, $bloque$ y el tag \texttt{TAG\_NEW\_BLOCK} como parámetros.
+Para referenciar a un proceso ($nodo$) usamos su \texttt{rank} dentro del communicator global \texttt{MPI\_COMM\_WORLD}. Cada nodo metiene las variables \texttt{mpi\_rank} y \texttt{total\_nodes}. Así, para cada \texttt{mpi\_rank} + 1 $\leq i \leq$ \texttt{mpi\_rank} + \texttt{total\_nodes}, definimos $destino$ como $i$ $mod$ \texttt{total\_nodes} y enviamos el mensaje usando \texttt{MPI\_Send} con $destino$, $bloque$ y el tag \texttt{TAG\_NEW\_BLOCK} como parámetros (principalmente).
  
 \subsection{Ejercicio 2}
 Para la resulución de este ejercicio, se agregó a la información que mantiene cada nodo un bool atómico \texttt{probando}. Además, se implementaron las funciones \texttt{lock} y \texttt{unlock} como se muestran a continuación:
@@ -101,7 +101,7 @@ Para la resulución de este ejercicio, se agregó a la información que mantiene ca
 \caption{\texttt{unlock}}
 \end{algorithm}
 
-A continuación, se muestra el pseudocódigo de la parte implementada como parte del trabajo del método \texttt{node}:
+Se pedía modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para evitar $race$ $conditinos$. A continuación, se muestra el pseudocódigo de la parte implementada del método \texttt{node}:
 
 \begin{algorithm}[H]
 \SetKwProg{Fn}{Función}{}{fin}
@@ -117,9 +117,9 @@ A continuación, se muestra el pseudocódigo de la parte implementada como parte d
 		$status$ $\leftarrow$ \texttt{MPI\_Recv($block$)} \\
 		\comentario{Si es un mensaje de nuevo bloque} \\
 		\If{status.tag = \texttt{TAG\_NEW\_BLOCK}}{
-			\texttt{lock} \\
+			\texttt{lock()} \\
 			\texttt{validate\_block\_for\_chain}($block$, $status$) \\
-			\texttt{unlock}		
+			\texttt{unlock()}		
 		} \comentario{Si es un mensaje de pedido de cadena} \\ 
 		\ElseIf{status.tag = TAG\_CHAIN\_HASH}{
 			\texttt{mandar\_cadena}($block$, $status$) \\		
@@ -129,17 +129,17 @@ A continuación, se muestra el pseudocódigo de la parte implementada como parte d
 \caption{\texttt{node}}
 \end{algorithm}
 
-En cuanto a la función \texttt{proof\_of\_work}, una vez que se consigue la cantidad de ceros requerida por la dificultad configurada, se ejecuta un bloque que inicialmente verifica que no haya cambiado \texttt{last\_block\_in\_chain} y finalmente llama a \texttt{broadcast\_block} para comunicar que se ha minado un bloque. Consideramos estas dos acciones como los límites de la sección crítica, así que llamamos a \texttt{lock} inmediatamente antes de la primera y a \texttt{unlock} inmediatamente después de la segunda.
+En cuanto a la función \texttt{proof\_of\_work}, una vez que se consigue la cantidad de ceros requerida por la dificultad configurada, se ejecuta un bloque que inicialmente verifica que no haya cambiado \texttt{last\_block\_in\_chain} y finalmente llama a \texttt{broadcast\_block} para comunicar que se ha minado un bloque. Consideramos estas dos acciones como los límites de la sección crítica, así que llamamos a \texttt{lock()} inmediatamente antes de la primera y a \texttt{unlock()} inmediatamente después de la segunda.
 
 \textbf{TODO: hablar de race conditions}  
 \subsection{Ejercicio 3}
-Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir si agregarlo o no a la cadena. Para eso se utiliza la función \texttt{validate\_block\_for\_chain}, la cual debía cumplir con el consenso definido en el enunciado. Su pseudocódigo es el siguiente:
+Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir si agregarlo o no a la cadena. Para eso se utiliza la función \texttt{validate\_block\_for\_chain}, la cual debía cumplir con el consenso definido en la sección 3 del enunciado. Su pseudocódigo es el siguiente:
 
 \begin{algorithm}[H]
 \SetKwProg{Fn}{Función}{}{fin}
 \SetAlgoLined
 \Fn{validate\_block\_for\_chain(rBlock, status)}{
-	agrego $rBlock$ al diccionario \\
+	agrego $rBlock$ a \texttt{node\_blocks} \\
 	\comentario{1er item del consenso} \\
 	\If{\texttt{valid\_new\_block(rBlock)}}{
 		\comentario{2do item del consenso} \\
@@ -178,7 +178,7 @@ Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir s
 \textbf{TODO: Hablar de las race conditions y quizás del if que no esta en el consenso}
  
 \subsection{Ejercicio 4}
-Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizará la función\texttt{verificar\_y\_migrar\_cadena}. La misma debía cumplir con el protocolo descripto en el enunciado. A continuación se muestra su pseudocódigo:
+Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizará la función \texttt{verificar\_y\_migrar\_cadena}. La misma debía cumplir con el protocolo descripto en la sección 4 del enunciado. A continuación se muestra su pseudocódigo:
 
 \begin{algorithm}[H]
 \SetKwProg{Fn}{Función}{}{fin}
