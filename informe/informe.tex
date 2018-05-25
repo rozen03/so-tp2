@@ -75,7 +75,7 @@ La función \texttt{broadcast\_block} es la encargada de, al momento en que un no
 \caption{\texttt{broadcast\_block}}
 \end{algorithm}
 
-Para referenciar a un proceso ($nodo$) usamos su \texttt{rank} dentro del communicator global \texttt{MPI\_COMM\_WORLD}. Cada nodo metiene las variables \texttt{mpi\_rank} y \texttt{total\_nodes}. Así, para cada \texttt{mpi\_rank} + 1 $\leq i \leq$ \texttt{mpi\_rank} + \texttt{total\_nodes}, definimos $destino$ como $i$ $mod$ \texttt{total\_nodes} y enviamos el mensaje usando \texttt{MPI\_Send} con $destino$, $bloque$ y el tag \texttt{TAG\_NEW\_BLOCK} como parámetros (principalmente).
+Para referenciar a un proceso ($nodo$) usamos su \texttt{rank} dentro del communicator global \texttt{MPI\_COMM\_WORLD}. Cada nodo metiene las variables \texttt{mpi\_rank} y \texttt{total\_nodes}. Así, para cada 1 $\leq i \leq$ \texttt{total\_nodes}, definimos $destino$ como $(i + \texttt{mpi\_rank})$ $mod$ \texttt{total\_nodes} y enviamos el mensaje usando \texttt{MPI\_Send} con $destino$, $bloque$ y el tag \texttt{TAG\_NEW\_BLOCK} como parámetros (principalmente). Es decir, enviamos el bloque desde el nodo siguiente al que lo minó en adelante, asegurándonos así que todos los nodos envíen mensajes en distinto orden.
  
 \subsection{Ejercicio 2}
 Para la resulución de este ejercicio, se agregó a la información que mantiene cada nodo un bool atómico \texttt{probando}. Además, se implementaron las funciones \texttt{lock} y \texttt{unlock} como se muestran a continuación:
@@ -129,9 +129,10 @@ Se pedía modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para e
 \caption{\texttt{node}}
 \end{algorithm}
 
-En cuanto a la función \texttt{proof\_of\_work}, una vez que se consigue la cantidad de ceros requerida por la dificultad configurada, se ejecuta un bloque que inicialmente verifica que no haya cambiado \texttt{last\_block\_in\_chain} y finalmente llama a \texttt{broadcast\_block} para comunicar que se ha minado un bloque. Consideramos estas dos acciones como los límites de la sección crítica, así que llamamos a \texttt{lock()} inmediatamente antes de la primera y a \texttt{unlock()} inmediatamente después de la segunda.
+En cuanto a la función \texttt{proof\_of\_work}, una vez que se consigue la cantidad de ceros requerida por la dificultad configurada, se ejecuta un bloque que inicialmente verifica que no haya cambiado \texttt{last\_block\_in\_chain} y finalmente llama a \texttt{broadcast\_block} para comunicar que se ha minado un bloque. Consideramos estas dos acciones como los límites de la sección crítica, así que llamamos a \texttt{lock()} inmediatamente antes de la primera y a \texttt{unlock()} inmediatamente después de la segunda, de esta forma evitamos \textit{race conditions} porque la cadena del nodo solo puede ser modificada por un \textit{thread} al mismo tiempo
 
-\textbf{TODO: hablar de race conditions}  
+\textbf{TODO: Detallar acá \texttt{mandar\_cadena}? Pero antes ver lo de recibir hash en vez de bloque. Ver si hacemos lo de probe, el pseudcódigo puede ser más pseudo.}
+
 \subsection{Ejercicio 3}
 Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir si agregarlo o no a la cadena. Para eso se utiliza la función \texttt{validate\_block\_for\_chain}, la cual debía cumplir con el consenso definido en la sección 3 del enunciado. Su pseudocódigo es el siguiente:
 
@@ -139,43 +140,44 @@ Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir s
 \SetKwProg{Fn}{Función}{}{fin}
 \SetAlgoLined
 \Fn{validate\_block\_for\_chain(rBlock, status)}{
-	agrego $rBlock$ a \texttt{node\_blocks} \\
-	\comentario{1er item del consenso} \\
 	\If{\texttt{valid\_new\_block(rBlock)}}{
-		\comentario{2do item del consenso} \\
+		agrego $rBlock$ a \texttt{node\_blocks} \\
 		\If{rBlock.indice = 1 y \texttt{last\_block\_in\_chain}.indice = 0}{
+			\comentario{2do item del consenso} \\
 			\texttt{last\_block\_in\_chain} $\leftarrow$ $rBlock$ \\
 			devolver \texttt{true}
 		}
 		\If{rBlock.indice = \texttt{last\_block\_in\_chain}.indice + 1}{
-			\comentario{3er item del consenso} \\
-			\If{anteior de rBlock = anterior de \texttt{last\_block\_in\_chain}}{
+			\uIf{anterior de rBlock = anterior de \texttt{last\_block\_in\_chain}}{
+				\comentario{3er item del consenso} \\
 				\texttt{last\_block\_in\_chain} $\leftarrow$ $rBlock$ \\
 				devolver \texttt{true} \\			
-			} \comentario{4to item del consenso} \\ 
-			\Else {
-				$res$ $\leftarrow$ \texttt{verificar\_y\_migrar\_cadena}($rBlock$, $status$) \\
-				devolver $res$
+			} \Else {
+				\comentario{4to item del consenso} \\ 
+				devolver \texttt{verificar\_y\_migrar\_cadena}($rBlock$, $status$)
 			}
 		}
-		\comentario{5to item del consenso} \\
 		\If{rBlock.indice = \texttt{last\_block\_in\_chain}.indice}{
+			\comentario{5to item del consenso} \\
 			devolver \texttt{false}		
 		}
 		\If{rBlock.indice $<$ \texttt{last\_block\_in\_chain}.indice}{
 			devolver \texttt{false}		
 		}
-		\comentario{6to item del consenso} \\
 		\If{rBlock.indice $>$ \texttt{last\_block\_in\_chain}.indice}{
-			$res$ $\leftarrow$ \texttt{verificar\_y\_migrar\_cadena}($rBlock$, $status$) \\
-			devolver $res$	
+			\comentario{6to item del consenso} \\
+			devolver \texttt{verificar\_y\_migrar\_cadena}($rBlock$, $status$) \\
 		}
 	}
+	\comentario{1er item del consenso} \\
+	devolver \textit{false}
 }
 \caption{\texttt{validate\_block\_for\_chain}}
 \end{algorithm}
 
-\textbf{TODO: Hablar de las race conditions y quizás del if que no esta en el consenso}
+Esta función puede modificar \texttt{last\_block\_in\_chain} a salvo de \textit{race conditions} porque se llama dentro de la sección crítica que definimos en el ejercicio anterior. 
+
+\textbf{TODO: Hablar quizás del if que no esta en el consenso.}
  
 \subsection{Ejercicio 4}
 Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizará la función \texttt{verificar\_y\_migrar\_cadena}. La misma debía cumplir con el protocolo descripto en la sección 4 del enunciado. A continuación se muestra su pseudocódigo:
@@ -190,44 +192,44 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 	$blockchain$ $\leftarrow$ nuevo arreglo de bloques \\
 	\texttt{MPI\_Recv}($blockchain$, $status.mpi\_source$, \texttt{TAG\_CHAIN\_RESPONSE}) \\
 	\comentario{1er item del protocolo} \\
-	\If{$blockchain$[0].indice $\neq$ rBlock.indice $\lor$ $blockchain$[0].hash $\neq$ rBlock.hash}{
-		borrar $blockchain$ \\
+	\If{el primer elemento de $blockchain$ tiene índice o hash distinto al pedido}{
 		devolver \texttt{false}	
 	}
 	\comentario{2do item del protocolo} \\
 	\If{rBlock.hash $\neq$ \texttt{block\_to\_hash($blockchain$[0])}}{
-		borrar $blockchain$ \\
 		devolver \texttt{false}	
 	}
-	\ForEach{bloque b en blockchain}{
+	\ForEach{bloque b $\in$ blockchain}{
 		$b'$ $\leftarrow$ siguiente del bloque b en blockchain \\
 		\comentario{3er item del protocolo} \\		
 		\If{hash del anterior de b $\neq$ b'.hash}{
-			borrar $blockchain$ \\
 			devolver \texttt{false}			
 		}
 		\comentario{4to item del protocolo} \\
-		\If{b.indice $\neq$ b'.indice}{
-			borrar $blockchain$ \\
+		\If{b.indice $\neq$ b'.indice + 1}{
 			devolver \texttt{false}		
 		}	
 	}
 	$u$ $\leftarrow$ ultimo bloque de $blockchain$ \\
 	\If{ningún b $\in$ blockchain está en el diccionario $\land$ $u$.indice $\neq$ 1}{
-		borrar $blockchain$ \\
 		devolver \texttt{false}		
 	}
 	\ForEach{bloque b $\in$ blockchain}{
-		\If{\texttt{valid\_new\_block($b$)}}{
+		\uIf{\texttt{valid\_new\_block($b$)}}{
 			agregar $b$ al diccionario \\		
 		} \Else {
-			borrar $blockchain$ \\
 			devolver \texttt{false}		
 		}	
 	}
+	\texttt{last\_block\_in\_chain} $\leftarrow$ $blockchain$[0] \\
+	devolver \texttt{true}	
 }
 \caption{\texttt{verificar\_y\_migrar\_cadena}}
 \end{algorithm}
+
+Esta función se llama solo desde la \texttt{validate\_block\_for\_chain}, la cual ya dijimos que se ejecuta dentro de la sección crítica, así que no hay \textit{race conditions} con el \textit{thread} que mina bloques.
+
+\textbf{TODO Sacar \texttt{valid\_new\_block($b$)}? Igual habría que revisar que los hashes sean correctos en algún lugar? No dice nada en el protocolo creo. Mensaje con hash en vez de bloque.}
 
 \subsection{Ejercicio 5}
 
