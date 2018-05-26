@@ -114,7 +114,7 @@ Se ped�a modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para
 	\While{\texttt{true}}{
 		$block$ $\leftarrow$ nuevo bloque \\
 		\comentario{Recibir mensajes de otros nodos} \\
-		$status$ $\leftarrow$ \texttt{MPI\_Probe()}
+		$status$ $\leftarrow$ \texttt{MPI\_Probe()} \\
 		\comentario{Si es un mensaje de nuevo bloque} \\
 		\If{status.tag = \texttt{TAG\_NEW\_BLOCK}}{
 		$status$ $\leftarrow$ \texttt{MPI\_Recv($block$)} \\
