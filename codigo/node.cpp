@@ -13,19 +13,19 @@
 int total_nodes, mpi_rank;
 Block *last_block_in_chain;
 map<string,Block> node_blocks;
-atomic<bool> probando;
-mutex mutexx;
+atomic<bool>probando;
 //Cuando me llega una cadena adelantada, y tengo que pedir los nodos que me faltan
 //Si nos separan más de VALIDATION_BLOCKS bloques de distancia entre las cadenas, se descarta por seguridad
 
 bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 	//TODO: Enviar mensaje TAG_CHAIN_HASH
-	MPI_Send(rBlock, 1, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_HASH, MPI_COMM_WORLD);
+	MPI_Send(rBlock->block_hash,HASH_SIZE, MPI_CHAR, status->MPI_SOURCE, TAG_CHAIN_HASH, MPI_COMM_WORLD);
 	Block *blockchain = new Block[VALIDATION_BLOCKS];
 
 	//TODO: Recibir mensaje TAG_CHAIN_RESPONSE
 	MPI_Status sttatus;
 	MPI_Recv(blockchain, VALIDATION_BLOCKS, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD, &sttatus);
+	printf("[%d] %d me dio cositas \n", mpi_rank, status->MPI_SOURCE);
 	int count;
 	MPI_Get_count(&sttatus,*MPI_BLOCK, &count);
 	uint countt = (uint) count;
@@ -155,36 +155,20 @@ bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
 void broadcast_block(const Block *block){
   	//No enviar a mí mismo
 	//mando desde el de la derecha en adelante, supongo q es un orden distinto... no?
-	//copio el bloque por que ya ni se
-	const Block *bloque = block;
 	int dest;
-	for (int i =0; i <total_nodes; ++i) {
+	for (int i =1; i <total_nodes; ++i) {
 		dest=(mpi_rank+i)%total_nodes;
-		dest = i;
-		if (i==mpi_rank){
-			continue;
-		}
-		//  printf("[%d] mando bloque a: [%d]\n",mpi_rank,dest);
-		MPI_Bsend(bloque, 1, *MPI_BLOCK, dest, TAG_NEW_BLOCK, MPI_COMM_WORLD);
-		//  printf("[%d] mande bloque a: [%d]\n",mpi_rank,dest);
+		MPI_Send(block, 1, *MPI_BLOCK, dest, TAG_NEW_BLOCK, MPI_COMM_WORLD);
 	}
 }
 void lock(){
-	// bool expected = false;
-	// while (!probando.compare_exchange_weak(expected, true)){
-		// expected = false;
-	// }
-	// auto pid =getpid();
-	// auto tid = pthread_self();
-	// printf("[%d][%d][%d]Entre!!\n",mpi_rank,pid,tid);
-	mutexx.lock();
+	bool expected = false;
+	while (!probando.compare_exchange_weak(expected, true)){
+		expected = false;
+	}
 }
 void unlock(){
-	// probando=false;
-	// auto pid =getpid();
-	// auto tid = pthread_self();
-	// printf("[%d][%d][%d]Sali!!\n",mpi_rank,pid,tid);
-	mutexx.unlock();
+	probando=false;
 }
 //Proof of work
 //TODO: Advertencia: puede tener condiciones de carrera
@@ -223,7 +207,7 @@ void* proof_of_work(void *ptr){
 
 				//TODO: Mientras comunico, no responder mensajes de nuevos nodos
 				broadcast_block(last_block_in_chain);
-				// printf("[%d][%d]  Se los mande a todos genialmente \n",mpi_rank,pid);
+				printf("[%d][%d]  Se los mande a todos genialmente \n",mpi_rank,pid);
 			}
 			unlock();
 		}
@@ -233,15 +217,15 @@ void* proof_of_work(void *ptr){
 	return NULL;
 }
 
-void mandar_cadena(const Block *rBlock, const MPI_Status *status){
-	uint size= min(VALIDATION_BLOCKS,(int)rBlock->index);
+void mandar_cadena(char block_hash[HASH_SIZE], const MPI_Status *status){
+	Block  block=node_blocks[block_hash];
+	uint size= min(VALIDATION_BLOCKS,(int)block.index);
 	Block *blockchain = new Block[size];
-	Block * block=(Block *)rBlock;
-	blockchain[0]=*block;
+	// blockchain[0]=*block;
 	//mandar los bloques en orden inverso asi despues "alice" puede fijarse en orden si lesirve
-	for (size_t i = 1; i < size; i++) {
-		blockchain[i]= node_blocks[block->previous_block_hash];
-		block =&node_blocks[block->previous_block_hash];
+	for (size_t i = 0; i < size; i++) {
+		blockchain[i]= node_blocks[block_hash];
+		block_hash =node_blocks[block_hash].block_hash;
 	}
 	MPI_Send(blockchain, size, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD);
 
@@ -271,15 +255,15 @@ int node(){
 	pthread_create(&thread, NULL, proof_of_work, NULL);
 	auto pid =getpid();
 	auto tid = pthread_self();
+	char block_hash[HASH_SIZE];
 	while(true){
 		Block *  block = new Block;
 		//TODO: Recibir mensajes de otros nodos
-
 		MPI_Status status;
-		MPI_Recv(block, 1, *MPI_BLOCK,  MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+		MPI_Probe(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
 		auto tag= status.MPI_TAG;
-
 		if (tag ==TAG_NEW_BLOCK){
+			MPI_Recv(block, 1, *MPI_BLOCK,  status.MPI_SOURCE, TAG_NEW_BLOCK, MPI_COMM_WORLD, &status);
 			//TODO: Si es un mensaje de nuevo bloque, llamar a la función
 			// validate_block_for_chain con el bloque recibido y el estado de MPI
 			lock();
@@ -288,7 +272,8 @@ int node(){
 		}else if(tag==TAG_CHAIN_HASH){
 			//TODO: Si es un mensaje de pedido de cadena,
 			//responderlo enviando los bloques correspondientes
-			mandar_cadena(block, &status);
+			MPI_Recv(block_hash, HASH_SIZE, MPI_CHAR, status.MPI_SOURCE, TAG_CHAIN_HASH, MPI_COMM_WORLD, &status);
+			mandar_cadena(block_hash, &status);
 		}
 	}
 
