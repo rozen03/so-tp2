@@ -19,7 +19,7 @@ bool valid_new_block(const Block *block){
   //Que el hash guardado sea válido
   string hash_hex_str;
   block_to_hash(block,hash_hex_str);
-  valid = valid && hash_hex_str.compare(block->block_hash) == 0;
+  valid = valid && (hash_hex_str.compare(block->block_hash) == 0);
   return valid;
 }
 
