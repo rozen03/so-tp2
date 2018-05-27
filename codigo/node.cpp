@@ -72,8 +72,9 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 		return false;
 	}
 	for (size_t i = 0; i < countt; i++) {
-		if (valid_new_block(&blockchain[i])){
-			// cout<<mpi_rank<<": CHE ME LLEGO UN bLOQUE DE NUMERO "<<blockchain[i].index<<endl;
+		string hash_hex_str;
+		block_to_hash(&blockchain[i],hash_hex_str);
+		if (hash_hex_str.compare(blockchain[i].block_hash) == 0){
 			node_blocks[string(blockchain[i].block_hash)]=blockchain[i];
 		}else{
 			delete []blockchain;
@@ -257,12 +258,12 @@ int node(){
 	auto tid = pthread_self();
 	char block_hash[HASH_SIZE];
 	while(true){
-		Block *  block = new Block;
 		//TODO: Recibir mensajes de otros nodos
 		MPI_Status status;
 		MPI_Probe(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
 		auto tag= status.MPI_TAG;
 		if (tag ==TAG_NEW_BLOCK){
+			Block *  block = new Block;
 			MPI_Recv(block, 1, *MPI_BLOCK,  status.MPI_SOURCE, TAG_NEW_BLOCK, MPI_COMM_WORLD, &status);
 			//TODO: Si es un mensaje de nuevo bloque, llamar a la función
 			// validate_block_for_chain con el bloque recibido y el estado de MPI
