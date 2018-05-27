@@ -156,7 +156,7 @@ void broadcast_block(const Block *block){
   	//No enviar a mí mismo
 	//mando desde el de la derecha en adelante, supongo q es un orden distinto... no?
 	int dest;
-	for (int i =1; i <total_nodes; ++i) {
+	for (int i =1; i <total_nodes; i++) {
 		dest=(mpi_rank+i)%total_nodes;
 		MPI_Send(block, 1, *MPI_BLOCK, dest, TAG_NEW_BLOCK, MPI_COMM_WORLD);
 	}
