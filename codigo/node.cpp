@@ -225,7 +225,7 @@ void mandar_cadena(char block_hash[HASH_SIZE], const MPI_Status *status){
 	//mandar los bloques en orden inverso asi despues "alice" puede fijarse en orden si lesirve
 	for (size_t i = 0; i < size; i++) {
 		blockchain[i]= node_blocks[block_hash];
-		block_hash =node_blocks[block_hash].block_hash;
+		block_hash =node_blocks[block_hash].previous_block_hash;
 	}
 	MPI_Send(blockchain, size, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD);
 
