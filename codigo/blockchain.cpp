@@ -14,29 +14,29 @@ MPI_Datatype *MPI_BLOCK;
 
 int main(int argc, char **argv) {
 
-  // Inicializo MPI
-  int status = MPI_Init(&argc, &argv);
-  if (status != MPI_SUCCESS){
-      fprintf(stderr, "Error de MPI al inicializar.\n");
-      MPI_Abort(MPI_COMM_WORLD, status);
-  }
+    // Inicializo MPI
+    int status = MPI_Init(&argc, &argv);
+    if (status != MPI_SUCCESS){
+        fprintf(stderr, "Error de MPI al inicializar.\n");
+        MPI_Abort(MPI_COMM_WORLD, status);
+    }
 
 
-  //Defino un nuevo tipo de datos de MPI para Block: MPI_BLOCK
-  MPI_BLOCK = new MPI_Datatype;
-  define_block_data_type_for_MPI(MPI_BLOCK);
+    //Defino un nuevo tipo de datos de MPI para Block: MPI_BLOCK
+    MPI_BLOCK = new MPI_Datatype;
+    define_block_data_type_for_MPI(MPI_BLOCK);
 
 
-  // Control del buffering: sin buffering
-  setbuf(stdout, NULL);
-  setbuf(stderr, NULL);
+    // Control del buffering: sin buffering
+    setbuf(stdout, NULL);
+    setbuf(stderr, NULL);
 
-  //Llama a la función que maneja cada nodo
-  node();
+    //Llama a la función que maneja cada nodo
+    node();
 
-  // Limpio MPI
-  MPI_Finalize();
-  delete MPI_BLOCK;
+    // Limpio MPI
+    MPI_Finalize();
+    delete MPI_BLOCK;
 
-  return 0;
+    return 0;
 }
