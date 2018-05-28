@@ -74,12 +74,13 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 	for (size_t i = 0; i < countt; i++) {
 		string hash_hex_str;
 		block_to_hash(&blockchain[i],hash_hex_str);
-		if ((hash_hex_str.compare(blockchain[i].block_hash) == 0) && solves_problem(hash_hex_str)){
-			node_blocks[string(blockchain[i].block_hash)]=blockchain[i];
-		}else{
+		if (!((hash_hex_str.compare(blockchain[i].block_hash) == 0) && solves_problem(hash_hex_str))){
 			delete []blockchain;
 			return false;
 		}
+	}
+	for (size_t i = 0; i < countt; i++) {
+		node_blocks[string(blockchain[i].block_hash)]=blockchain[i];
 	}
 	last_block_in_chain = &blockchain[0];
 	// delete []blockchain; no descomentar esto, si borramos el array se queda basura en los bloques
@@ -89,7 +90,7 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
 
 //Verifica que el bloque tenga que ser incluido en la cadena, y lo agrega si corresponde
 bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
-  if(valid_new_block(rBlock)){
+	if(valid_new_block(rBlock)){
 	//Agrego el bloque al diccionario, aunque no
 	//necesariamente eso lo agrega a la cadena
 	node_blocks[string(rBlock->block_hash)]=*rBlock;
@@ -177,8 +178,6 @@ void* proof_of_work(void *ptr){
 	string hash_hex_str;
 	Block block;
 	unsigned int mined_blocks = 0;
-	auto tid = pthread_self();
-	auto pid = getpid();
 	while(true){
 
 		block = *last_block_in_chain;
@@ -204,11 +203,10 @@ void* proof_of_work(void *ptr){
 				strcpy(last_block_in_chain->block_hash, hash_hex_str.c_str());
 				last_block_in_chain->created_at = static_cast<unsigned long int> (time(NULL));
 				node_blocks[hash_hex_str] = *last_block_in_chain;
-				printf("[%d][%d][%d] Agregué un producido con index %d\n",mpi_rank,pid,tid,last_block_in_chain->index);
+				printf("[%d]Agregué un producido con index %d\n",mpi_rank,last_block_in_chain->index);
 
 				//TODO: Mientras comunico, no responder mensajes de nuevos nodos
 				broadcast_block(last_block_in_chain);
-				printf("[%d][%d]  Se los mande a todos genialmente \n",mpi_rank,pid);
 			}
 			unlock();
 		}
@@ -254,8 +252,6 @@ int node(){
 	//TODO: Crear thread para minar
 	pthread_t thread;
 	pthread_create(&thread, NULL, proof_of_work, NULL);
-	auto pid =getpid();
-	auto tid = pthread_self();
 	char block_hash[HASH_SIZE];
 	while(true){
 		//TODO: Recibir mensajes de otros nodos
