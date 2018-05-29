@@ -101,6 +101,8 @@ Para la resulución de este ejercicio, se agregó a la información que mantiene
 \caption{\texttt{unlock}}
 \end{algorithm}
 
+\textbf{TODO: Creo que no hace faltan esos pseudocódigos, decir que implementamos un spinlock.}
+
 Se pedía modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para evitar $race$ $conditinos$. A continuación, se muestra el pseudocódigo de la parte implementada del método \texttt{node}:
 
 \begin{algorithm}[H]
@@ -116,19 +118,23 @@ Se pedía modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para 
 		$status$ $\leftarrow$ \texttt{MPI\_Probe()} \\
 		\comentario{Si es un mensaje de nuevo bloque} \\
 		\If{status.tag = \texttt{TAG\_NEW\_BLOCK}}{
-		$status$ $\leftarrow$ \texttt{MPI\_Recv($block$)} \\
+			$status$ $\leftarrow$ \texttt{MPI\_Recv($block$)} \\
 			\texttt{lock()} \\
 			\texttt{validate\_block\_for\_chain}($block$, $status$) \\
 			\texttt{unlock()}
 		} \comentario{Si es un mensaje de pedido de cadena} \\
 		\ElseIf{status.tag = TAG\_CHAIN\_HASH}{
-		$status$ $\leftarrow$ \texttt{MPI\_Recv($block_hash$)} \\
+			$status$ $\leftarrow$ \texttt{MPI\_Recv($block_hash$)} \\
 			\texttt{mandar\_cadena}($block_hash$, $status$) \\
 		}
 	}
 }
 \caption{\texttt{node}}
 \end{algorithm}
+
+Ya que el mensaje recibido puede contener un bloque minado por otro o un hash para solicitar una cadena, y estos tienen tipos diferentes, antes de llamar a la función \texttt{MPI\_Recv} se llama a \texttt{MPI\_Probe()} para verificar el $tag$ del próximo mensaje recibido y a partir de éste usar \texttt{MPI\_Recv} con el tipo de dato correcto.
+
+Si se recibe un mensaje con $tag$ \texttt{TAG\_CHAIN\_HASH} entonces se invoca a la función \texttt{mandar\_cadena} que manda la cadena al nodo que la solicitó. Para eso, la misma crea un arreglo de bloque cuyo tamaño (en cantidad) es el mínimo entre \texttt{VALIDATION_BLOCKS} y el índice del bloque del hash solicitada. A continuación llena el arreglo, en la primera posición con el bloque del hash recibido y en las siguientes con los bloques anteriores. Los bloques los obtiene usando el diccionario \texttt{node\_blocks}.
 
 En cuanto a la función \texttt{proof\_of\_work}, una vez que se consigue la cantidad de ceros requerida por la dificultad configurada, se ejecuta un bloque que inicialmente verifica que no haya cambiado \texttt{last\_block\_in\_chain} y finalmente llama a \texttt{broadcast\_block} para comunicar que se ha minado un bloque. Consideramos estas dos acciones como los límites de la sección crítica, así que llamamos a \texttt{lock()} inmediatamente antes de la primera y a \texttt{unlock()} inmediatamente después de la segunda, de esta forma evitamos \textit{race conditions} porque la cadena del nodo solo puede ser modificada por un \textit{thread} al mismo tiempo
 
@@ -215,7 +221,7 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 	\If{ningún b $\in$ blockchain está en el diccionario $\land$ $u$.indice $\neq$ 1}{
 		devolver \texttt{false}		
 	}
-	agregar bloques recibidos al diccionario \\
+	agregar bloques recibidos a \texttt{node\_blocks} \\
 	\texttt{last\_block\_in\_chain} $\leftarrow$ $blockchain$[0] \\
 	devolver \texttt{true}	
 }
