@@ -82,8 +82,8 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
     for (size_t i = 0; i < countt; i++) {
         node_blocks[string(blockchain[i].block_hash)]=blockchain[i];
     }
-    last_block_in_chain = &blockchain[0];
-    // delete []blockchain; no descomentar esto, si borramos el array se queda basura en los bloques
+    *last_block_in_chain = blockchain[0];
+    delete []blockchain;
     return true;
 
 }
@@ -100,7 +100,7 @@ bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
         //caso 0
         if(rBlock->index == 1 && last_block_in_chain->index==0){
             //entonces lo agrego como nuevo último.
-            last_block_in_chain=(Block *)rBlock;
+            *last_block_in_chain = *rBlock;
             printf("[%d] Agregado a la lista bloque con index %d enviado por %d \n", mpi_rank, rBlock->index,status->MPI_SOURCE);
             return true;
         }
@@ -111,7 +111,7 @@ bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
             //caso 1
             if(strcmp(rBlock->previous_block_hash,last_block_in_chain->block_hash)==0){
                 //entonces lo agrego como nuevo último.
-                last_block_in_chain=(Block *)rBlock;
+                *last_block_in_chain = *rBlock;
                 printf("[%d] Agregado a la lista bloque con index %d enviado por %d \n", mpi_rank, rBlock->index,status->MPI_SOURCE);
                 return true;
                 //caso 2
@@ -253,13 +253,13 @@ int node(){
     pthread_t thread;
     pthread_create(&thread, NULL, proof_of_work, NULL);
     char block_hash[HASH_SIZE];
+    Block *block = new Block;
     while(true){
         //TODO: Recibir mensajes de otros nodos
         MPI_Status status;
         MPI_Probe(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
         auto tag= status.MPI_TAG;
         if (tag ==TAG_NEW_BLOCK){
-            Block *  block = new Block;
             MPI_Recv(block, 1, *MPI_BLOCK,  status.MPI_SOURCE, TAG_NEW_BLOCK, MPI_COMM_WORLD, &status);
             //TODO: Si es un mensaje de nuevo bloque, llamar a la función
             // validate_block_for_chain con el bloque recibido y el estado de MPI
@@ -275,5 +275,6 @@ int node(){
     }
 
     delete last_block_in_chain;
+    delete block;
     return 0;
 }
