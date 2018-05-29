@@ -38,14 +38,15 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
         delete []blockchain;
         return false;
     }
-    // El hash del bloque recibido es igual al calculado por la función block_to_hash.
-    string hash;
-    block_to_hash(&blockchain[0],hash);
-    if(strcmp(hash.c_str(),blockchain[0].block_hash) !=0){
-        delete []blockchain;
-        return false;
+    // El hash de los bloques recibidos es igual a los calculado por la función block_to_hash y resuelven el problema.
+    for (size_t i = 0; i < countt; i++) {
+        string hash_hex_str;
+        block_to_hash(&blockchain[i],hash_hex_str);
+        if (!((hash_hex_str.compare(blockchain[i].block_hash) == 0) && solves_problem(hash_hex_str))){
+            delete []blockchain;
+            return false;
+        }
     }
-
     for (size_t i = 0; i < countt-1; i++) {
         //Cada bloque siguiente de la lista, contiene el hash definido en previous_block_hash del
         //actual elemento.
@@ -71,14 +72,7 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
         delete []blockchain;
         return false;
     }
-    for (size_t i = 0; i < countt; i++) {
-        string hash_hex_str;
-        block_to_hash(&blockchain[i],hash_hex_str);
-        if (!((hash_hex_str.compare(blockchain[i].block_hash) == 0) && solves_problem(hash_hex_str))){
-            delete []blockchain;
-            return false;
-        }
-    }
+
     for (size_t i = 0; i < countt; i++) {
         node_blocks[string(blockchain[i].block_hash)]=blockchain[i];
     }
