@@ -112,7 +112,6 @@ Se pedía modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para 
 	\comentario{Crear thread para minar} \\
 	crear nuevo thread con la función \texttt{proof\_of\_work} como punto de inicio \\
 	\While{\texttt{true}}{
-		$block$ $\leftarrow$ nuevo bloque \\
 		\comentario{Recibir mensajes de otros nodos} \\
 		$status$ $\leftarrow$ \texttt{MPI\_Probe()} \\
 		\comentario{Si es un mensaje de nuevo bloque} \\
@@ -189,7 +188,7 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 \SetAlgoLined
 \Fn{\texttt{verificar\_y\_migrar\_cadena}(rBlock, status)}{
 	\comentario{Solicitud de los bloques} \\	
-	\texttt{MPI\_Send}($rBlock$, $status.mpi\_source$, \texttt{TAG\_CHAIN\_HASH}) \\
+	\texttt{MPI\_Send}($rBlock.block\_hash$, $status.mpi\_source$, \texttt{TAG\_CHAIN\_HASH}) \\
 	\comentario{Recepción de los bloques} \\
 	$blockchain$ $\leftarrow$ nuevo arreglo de bloques \\
 	\texttt{MPI\_Recv}($blockchain$, $status.mpi\_source$, \texttt{TAG\_CHAIN\_RESPONSE}) \\
@@ -228,6 +227,8 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 }
 \caption{\texttt{verificar\_y\_migrar\_cadena}}
 \end{algorithm}
+
+El arreglo $blockchain$ se crea con tamaño \texttt{VALIDATION_BLOCKS} y en \texttt{MPI\_Recv} se especifica este valor para la cantidad máxima de bloques recibidos. Sin embargo, se pueden recibir menos y por eso utilizamos la función \texttt{MPI_Get_count} para saber la cantidad de bloques recibida. 
 
 Esta función se llama solo desde la \texttt{validate\_block\_for\_chain}, la cual ya dijimos que se ejecuta dentro de la sección crítica, así que no hay \textit{race conditions} con el \textit{thread} que mina bloques.
 
