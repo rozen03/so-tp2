@@ -234,6 +234,13 @@ Esta función se llama solo desde la \texttt{validate\_block\_for\_chain}, la cu
 \textbf{TODO Sacar \texttt{valid\_new\_block($b$)}? Igual habría que revisar que los hashes sean correctos en algún lugar? No dice nada en el protocolo creo. Mensaje con hash en vez de bloque.}
 
 \subsection{Ejercicio 5}
+En esta sección se responderán las preguntas del enunciado en base a un análisis del protocolo desarrollado.
+
+\begin{itemize}
+    \item ¿Puede este protocolo producir dos o más blockchains que nunca converjan? \\
+    \\
+    Si, es posible que se de dicha situación. Supongamos el caso en que dos nodos minan bloques propios antes de recibir el mensaje correspondiente del otro. Ante esto, los bloques se crearán con igual índice y ambos nodos no tomarán acciones al recibir el mensaje del otro (pseudocódigo de \texttt{validate\_block\_for\_chain}, $5^{to}$ item del consenso) y, si dicha situación persiste hasta que sus blockchains superen en logitud a la constante \texttt{VALIDATION\_BLOCKS}, sus cadenas ya no podrán converger pues no se pueden migrar cadenas que superen esa longitud.  
+\end{itemize}
 
 \section{Experimentación}
 
