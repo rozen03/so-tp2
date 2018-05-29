@@ -235,6 +235,20 @@ En cuanto al segundo ítem de verificaciones del conceso, el enunciando especifi
 Esta función se llama solo desde la \texttt{validate\_block\_for\_chain}, la cual ya dijimos que se ejecuta dentro de la sección crítica, así que no hay \textit{race conditions} con el \textit{thread} que mina bloques.
 
 \subsection{Ejercicio 5}
+En esta sección se responderán las preguntas del enunciado en base a un análisis del protocolo desarrollado.
+
+\begin{itemize}
+    \item ¿Puede este protocolo producir dos o más blockchains que nunca converjan? \\
+    \\
+    Si, es posible que se de dicha situación. Supongamos el caso en que dos nodos minan bloques propios antes de recibir el mensaje correspondiente del otro. Ante esto, los bloques se crearán con igual índice y ambos nodos no tomarán acciones al recibir el mensaje del otro (pseudocódigo de \texttt{validate\_block\_for\_chain}, $5^{to}$ item del consenso) y, si dicha situación persiste hasta que sus blockchains superen en logitud a la constante \texttt{VALIDATION\_BLOCKS}, sus cadenas ya no podrán converger pues no se pueden migrar cadenas que superen esa longitud.
+    \item ¿Cómo afecta la demora o la pérdida en la entrega de paquetes al protocolo? \\
+    \\
+    La demora o la pérdida de paquetes facilita que se de la situación antes mencionada. Los nodos, al enterarse tarde o directamente no enterarse de las acciones del resto, pueden caer en conflictos suaves y así las blockchains de dos o más nodos pueden ir difiriendo hasta que ya no sea posible la convergencia.
+    \item ¿Cómo afecta el aumento o la disminución de la dificultad del Proof-of-Work a los conflictos entre nodos y a la convergencia? \\
+    \\
+    \textbf{TODO: Referenciar experimento que respalde estas hipótesis} \\
+    A mayor dificultad resulta más difícil minar exitosamente un bloque, por lo que es esperable que todos los nodos tengan la misma cadena, facilitando así la convergencia. Por otro lado, a menor dificultad, los bloques se minarán con mayor frecuencia, por lo que es esperable que se produzcan más migraciones y más conflictos suaves, atentando así contra la convergencia del mismo modo ya discutido en esta sección.   
+\end{itemize}
 
 \section{Experimentación}
 
