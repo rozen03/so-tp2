@@ -1,0 +1,16 @@
+-¿Puede este protocolo producir dos o más blockchains que nunca converjan?
+si, con el simple caso de tener 2 nodos q siempre esten encontrando casualmnete al mismo tiempo cada bloque lo cual no es imposible por que cada nodo
+ trabaja indepnedientemente. entonces nunca van a converger.
+
+
+-¿Cómo afecta la demora o la pérdida en la entrega de paquetes al protocolo?
+Frente a la demora de paquetes lo que puede ocurrir es:
+-Otro nodo posteriormente encontro el mismo bloque que tu nodo encontro, lo cual puede producir un Conflicto Suave con otros nodos.(q se forkee).
+-Te lleguen bloques viejos que no te sirven
+-Que un nodo quede muy adelante u otro muy atras y luego jamas converja la cadena con el resto por que no van a tener bloques en comun
+
+
+-¿Cómo afecta el aumento o la disminución de la dificultad del Proof-of-Work a los conflictos entre nodos y a la convergencia?
+--a mayor disficiultad mas comun es que todos los nodos tengan la misma cadena, ya que va a sr mas dificil para todos conseguir un nuevo bloque.
+--a menor dificultad es mas comun que se forkee demasiadas veces... producindo conflictos constantemente que hay que resolver haciendo que otros mensajes sean tomados en cuenta tarde o en desorden.
+--Ademas dentro de todo van a tardar menos los nodos en llegar al maximo de bloques
