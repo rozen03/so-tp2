@@ -10,14 +10,15 @@
 #include <map>
 #include <unistd.h>
 #include <mutex>
+
 int total_nodes, mpi_rank;
 Block *last_block_in_chain;
 map<string,Block> node_blocks;
 atomic<bool> probando;
+
 //Cuando me llega una cadena adelantada, y tengo que pedir los nodos que me faltan
 //Si nos separan más de VALIDATION_BLOCKS bloques de distancia entre las cadenas, se descarta por seguridad
-
-bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
+bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status) {
     //TODO: Enviar mensaje TAG_CHAIN_HASH
     MPI_Send(rBlock->block_hash,HASH_SIZE, MPI_CHAR, status->MPI_SOURCE, TAG_CHAIN_HASH, MPI_COMM_WORLD);
     Block *blockchain = new Block[VALIDATION_BLOCKS];
@@ -25,58 +26,61 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status){
     //TODO: Recibir mensaje TAG_CHAIN_RESPONSE
     MPI_Status sttatus;
     MPI_Recv(blockchain, VALIDATION_BLOCKS, *MPI_BLOCK, status->MPI_SOURCE, TAG_CHAIN_RESPONSE, MPI_COMM_WORLD, &sttatus);
-    printf("[%d] %d me dio cositas \n", mpi_rank, status->MPI_SOURCE);
     int count;
     MPI_Get_count(&sttatus,*MPI_BLOCK, &count);
-    uint countt = (uint) count;
-    //TODO: Verificar que los bloques recibidos
-    //sean válidos y se puedan acoplar a la cadena
+
+    //TODO: Verificar que los bloques recibidos sean válidos y se puedan acoplar a la cadena
     //El primer bloque de la lista contiene el hash pedido y el mismo index que el bloque original.
-    if(blockchain[0].index != rBlock->index || strcmp(blockchain[0].block_hash,rBlock->block_hash)!= 0){
-        printf("[%d] %d me dio basura \n", mpi_rank, status->MPI_SOURCE);
-        cout<<"LO INICE FUERON: "<<blockchain[0].index <<" " <<rBlock->index;
+    if (blockchain[0].index != rBlock->index || strcmp(blockchain[0].block_hash,rBlock->block_hash)!= 0) {
+        printf("[%d] Migración fallida, %d me dio una cadena inválida \n", mpi_rank, status->MPI_SOURCE);
         delete []blockchain;
         return false;
     }
     // El hash de los bloques recibidos es igual a los calculado por la función block_to_hash y resuelven el problema.
-    for (size_t i = 0; i < countt; i++) {
+    for (size_t i = 0; i < (uint)count; i++) {
         string hash_hex_str;
         block_to_hash(&blockchain[i],hash_hex_str);
-        if (!((hash_hex_str.compare(blockchain[i].block_hash) == 0) && solves_problem(hash_hex_str))){
+        if (!((hash_hex_str.compare(blockchain[i].block_hash) == 0) && solves_problem(hash_hex_str))) {
+            printf("[%d] Migración fallida, %d me dio una cadena inválida \n", mpi_rank, status->MPI_SOURCE);
             delete []blockchain;
             return false;
         }
     }
-    for (size_t i = 0; i < countt-1; i++) {
+    for (size_t i = 0; i < (uint)count-1; i++) {
         //Cada bloque siguiente de la lista, contiene el hash definido en previous_block_hash del
         //actual elemento.
-        if(strcmp(blockchain[i].previous_block_hash,blockchain[i+1].block_hash) != 0){
+        if (strcmp(blockchain[i].previous_block_hash,blockchain[i+1].block_hash) != 0) {
+            printf("[%d] Migración fallida, %d me dio una cadena inválida \n", mpi_rank, status->MPI_SOURCE);
             delete []blockchain;
             return false;
         }
         //Cada bloque siguiente de la lista, contiene el índice anterior al actual elemento.
-        if((blockchain[i].index != blockchain[i+1].index+1)){
+        if ((blockchain[i].index != blockchain[i+1].index+1)) {
+            printf("[%d] Migración fallida, %d me dio una cadena inválida \n", mpi_rank, status->MPI_SOURCE);
             delete []blockchain;
             return false;
         }
     }
 
     bool hayAlguno=false;
-    for (size_t i = 0; i < countt; i++) {
-        if (node_blocks.find(blockchain[i].block_hash) != node_blocks.end()){
-            hayAlguno=true;
+    for (size_t i = 0; i < (uint)count; i++) {
+        if (node_blocks.find(blockchain[i].block_hash) != node_blocks.end()) {
+            hayAlguno = true;
             break;
         }
     }
-    if(!hayAlguno && blockchain[countt-1].index!=1){
+    if (!hayAlguno && blockchain[count-1].index!=1) {
+            printf("[%d] Migración fallida, %d me dio una cadena que no puedo unir \n", mpi_rank, status->MPI_SOURCE);
         delete []blockchain;
         return false;
     }
 
-    for (size_t i = 0; i < countt; i++) {
-        node_blocks[string(blockchain[i].block_hash)]=blockchain[i];
+
+    for (size_t i = 0; i < (uint)count; i++) {
+        node_blocks[string(blockchain[i].block_hash)] = blockchain[i];
     }
     *last_block_in_chain = blockchain[0];
+    printf("[%d] Migración con éxito a la cadena de %d \n", mpi_rank, status->MPI_SOURCE);
     delete []blockchain;
     return true;
 
@@ -197,7 +201,7 @@ void* proof_of_work(void *ptr){
                 *last_block_in_chain = block;
                 strcpy(last_block_in_chain->block_hash, hash_hex_str.c_str());
                 node_blocks[hash_hex_str] = *last_block_in_chain;
-                printf("[%d]Agregué un producido con index %d\n",mpi_rank,last_block_in_chain->index);
+                // printf("[%d] Agregué un producido con index %d \n",mpi_rank,last_block_in_chain->index);
 
                 //TODO: Mientras comunico, no responder mensajes de nuevos nodos
                 broadcast_block(last_block_in_chain);

@@ -188,7 +188,7 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 \SetAlgoLined
 \Fn{\texttt{verificar\_y\_migrar\_cadena}(rBlock, status)}{
 	\comentario{Solicitud de los bloques} \\	
-	\texttt{MPI\_Send}($rBlock.block\_hash$, $status.mpi\_source$, \texttt{TAG\_CHAIN\_HASH}) \\
+	\texttt{MPI\_Send}($rBlock.hash$, $status.mpi\_source$, \texttt{TAG\_CHAIN\_HASH}) \\
 	\comentario{Recepción de los bloques} \\
 	$blockchain$ $\leftarrow$ nuevo arreglo de bloques \\
 	\texttt{MPI\_Recv}($blockchain$, $status.mpi\_source$, \texttt{TAG\_CHAIN\_RESPONSE}) \\
@@ -196,11 +196,11 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 	\If{el primer elemento de $blockchain$ tiene índice o hash distinto al pedido}{
 		devolver \texttt{false}	
 	}
-	\comentario{2do item del protocolo} \\
-	\If{rBlock.hash $\neq$ \texttt{block\_to\_hash($blockchain$[0])}}{
-		devolver \texttt{false}	
-	}
 	\ForEach{bloque b $\in$ blockchain}{
+		\comentario{2do item del protocolo} \\
+		\If{el hash de b es válido}{
+			devolver \texttt{false}	
+		}
 		$b'$ $\leftarrow$ siguiente del bloque b en blockchain \\
 		\comentario{3er item del protocolo} \\		
 		\If{hash del anterior de b $\neq$ b'.hash}{
@@ -215,13 +215,7 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 	\If{ningún b $\in$ blockchain está en el diccionario $\land$ $u$.indice $\neq$ 1}{
 		devolver \texttt{false}		
 	}
-	\ForEach{bloque b $\in$ blockchain}{
-		\uIf{\texttt{valid\_new\_block($b$)}}{
-			agregar $b$ al diccionario \\		
-		} \Else {
-			devolver \texttt{false}		
-		}	
-	}
+	agregar bloques recibidos al diccionario \\
 	\texttt{last\_block\_in\_chain} $\leftarrow$ $blockchain$[0] \\
 	devolver \texttt{true}	
 }
@@ -230,9 +224,9 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 
 El arreglo $blockchain$ se crea con tamaño \texttt{VALIDATION_BLOCKS} y en \texttt{MPI\_Recv} se especifica este valor para la cantidad máxima de bloques recibidos. Sin embargo, se pueden recibir menos y por eso utilizamos la función \texttt{MPI_Get_count} para saber la cantidad de bloques recibida. 
 
-Esta función se llama solo desde la \texttt{validate\_block\_for\_chain}, la cual ya dijimos que se ejecuta dentro de la sección crítica, así que no hay \textit{race conditions} con el \textit{thread} que mina bloques.
+En cuanto al segundo ítem de verificaciones del conceso, el enunciando especifica que "El hash del bloque recibido es igual al calculado por la función \texttt{block\_to\_hash}.". Lo que hicimos en cambio fue revisar que el hash además resuelva el problema usando la función \texttt{solves\_problem}, y la verificación la hacemos para todos los blqoues recibidos, no solo uno.
 
-\textbf{TODO Sacar \texttt{valid\_new\_block($b$)}? Igual habría que revisar que los hashes sean correctos en algún lugar? No dice nada en el protocolo creo. Mensaje con hash en vez de bloque.}
+Esta función se llama solo desde la \texttt{validate\_block\_for\_chain}, la cual ya dijimos que se ejecuta dentro de la sección crítica, así que no hay \textit{race conditions} con el \textit{thread} que mina bloques.
 
 \subsection{Ejercicio 5}
 
