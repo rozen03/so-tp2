@@ -1,6 +1,6 @@
 \documentclass[10pt, a4paper, hidelinks]{article}
 \usepackage[paper=a4paper, left=2cm, right=2cm, bottom=2cm, top=3cm]{geometry} %ajustar márgnens
-\usepackage[latin1]{inputenc}
+\usepackage[utf8]{inputenc}
 \usepackage[spanish]{babel}
 \usepackage{caratula}
 \usepackage{enumitem} 
@@ -125,7 +125,7 @@ Se pedía modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para 
 		} \comentario{Si es un mensaje de pedido de cadena} \\
 		\ElseIf{status.tag = TAG\_CHAIN\_HASH}{
 			$status$ $\leftarrow$ \texttt{MPI\_Recv($block_hash$)} \\
-			\texttt{mandar\_cadena}($block_hash$, $status$) \\
+			\texttt{mandar\_cadena}($block\_hash$, $status$) \\
 		}
 	}
 }
@@ -134,7 +134,7 @@ Se pedía modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para 
 
 Ya que el mensaje recibido puede contener un bloque minado por otro o un hash para solicitar una cadena, y estos tienen tipos diferentes, antes de llamar a la función \texttt{MPI\_Recv} se llama a \texttt{MPI\_Probe()} para verificar el $tag$ del próximo mensaje recibido y a partir de éste usar \texttt{MPI\_Recv} con el tipo de dato correcto.
 
-Si se recibe un mensaje con $tag$ \texttt{TAG\_CHAIN\_HASH} entonces se invoca a la función \texttt{mandar\_cadena} que manda la cadena al nodo que la solicitó. Para eso, la misma crea un arreglo de bloque cuyo tamaño (en cantidad) es el mínimo entre \texttt{VALIDATION_BLOCKS} y el índice del bloque del hash solicitada. A continuación llena el arreglo, en la primera posición con el bloque del hash recibido y en las siguientes con los bloques anteriores. Los bloques los obtiene usando el diccionario \texttt{node\_blocks}.
+Si se recibe un mensaje con $tag$ \texttt{TAG\_CHAIN\_HASH} entonces se invoca a la función \texttt{mandar\_cadena} que manda la cadena al nodo que la solicitó. Para eso, la misma crea un arreglo de bloque cuyo tamaño (en cantidad) es el mínimo entre \texttt{VALIDATION\_BLOCKS} y el índice del bloque del hash solicitada. A continuación llena el arreglo, en la primera posición con el bloque del hash recibido y en las siguientes con los bloques anteriores. Los bloques los obtiene usando el diccionario \texttt{node\_blocks}.
 
 En cuanto a la función \texttt{proof\_of\_work}, una vez que se consigue la cantidad de ceros requerida por la dificultad configurada, se ejecuta un bloque que inicialmente verifica que no haya cambiado \texttt{last\_block\_in\_chain} y finalmente llama a \texttt{broadcast\_block} para comunicar que se ha minado un bloque. Consideramos estas dos acciones como los límites de la sección crítica, así que llamamos a \texttt{lock()} inmediatamente antes de la primera y a \texttt{unlock()} inmediatamente después de la segunda, de esta forma evitamos \textit{race conditions} porque la cadena del nodo solo puede ser modificada por un \textit{thread} al mismo tiempo
 
@@ -183,8 +183,6 @@ Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir 
 \end{algorithm}
 
 Esta función puede modificar \texttt{last\_block\_in\_chain} a salvo de \textit{race conditions} porque se llama dentro de la sección crítica que definimos en el ejercicio anterior. 
-
-\textbf{TODO: Hablar quizás del if que no esta en el consenso.}
  
 \subsection{Ejercicio 4}
 Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizará la función \texttt{verificar\_y\_migrar\_cadena}. La misma debía cumplir con el protocolo descripto en la sección 4 del enunciado. A continuación se muestra su pseudocódigo:
@@ -228,9 +226,9 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 \caption{\texttt{verificar\_y\_migrar\_cadena}}
 \end{algorithm}
 
-El arreglo $blockchain$ se crea con tamaño \texttt{VALIDATION_BLOCKS} y en \texttt{MPI\_Recv} se especifica este valor para la cantidad máxima de bloques recibidos. Sin embargo, se pueden recibir menos y por eso utilizamos la función \texttt{MPI_Get_count} para saber la cantidad de bloques recibida. 
+El arreglo $blockchain$ se crea con tamaño \texttt{VALIDATION\_BLOCKS} y en \texttt{MPI\_Recv} se especifica este valor para la cantidad máxima de bloques recibidos. Sin embargo, se pueden recibir menos y por eso utilizamos la función \texttt{MPI\_Get\_count} para saber la cantidad de bloques recibida. 
 
-En cuanto al segundo ítem de verificaciones del conceso, el enunciando especifica que "El hash del bloque recibido es igual al calculado por la función \texttt{block\_to\_hash}.". Lo que hicimos en cambio fue revisar que el hash además resuelva el problema usando la función \texttt{solves\_problem}, y la verificación la hacemos para todos los blqoues recibidos, no solo uno.
+En cuanto al segundo ítem de verificaciones del conceso, el enunciando especifica que ``El hash del bloque recibido es igual al calculado por la función \texttt{block\_to\_hash}.''. Lo que hicimos en cambio fue revisar que el hash además resuelva el problema usando la función \texttt{solves\_problem}, y la verificación la hacemos para todos los blqoues recibidos, no solo uno.
 
 Esta función se llama solo desde la \texttt{validate\_block\_for\_chain}, la cual ya dijimos que se ejecuta dentro de la sección crítica, así que no hay \textit{race conditions} con el \textit{thread} que mina bloques.
 
