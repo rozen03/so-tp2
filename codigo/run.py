@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-(
 import subprocess
 
-f=open("exp10.csv", mode="w")
+f=open("exp15.csv", mode="w")
 def probar(procesos):
 	try:
 		logs = open("logs.txt", "w")
@@ -12,6 +12,7 @@ def probar(procesos):
 		proc=subprocess.Popen(commanDOS,stdout=subprocess.PIPE,shell=True)
 		output = proc.stdout.read().strip().decode("utf-8")
 		f.write(str(procesos)+","+output+"\n")
+		logs.close()
 		print("termine bien")
 		return True
 	except Exception as inst:
