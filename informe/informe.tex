@@ -58,7 +58,7 @@
 \section{Introducción}
 Para este trabajo se debía implementar una cadena de bloques ($blockchain$) utilizando la interfaz MPI con el objetivo de desarrollar conocimientos en sistemas distribuidos.
 
-A continuación se presenta un breve resumén de la resolución de cada ejercicio así como de la experimentación realizada. El enunciado completo se encuentra en el Apéndice A, donde puede consultarse tanto la información de las estructuras usadas como los enunciados a los que responden las siguientes secciones del informe.
+A continuación se presenta un breve resumen de la resolución de cada ejercicio así como de la experimentación realizada. El enunciado completo se encuentra en el Apéndice A, donde puede consultarse tanto la información de las estructuras usadas como los enunciados a los que responden las siguientes secciones del informe.
 
 \section{Resolución}
 \subsection{Ejercicio 1}
@@ -78,32 +78,7 @@ La función \texttt{broadcast\_block} es la encargada de, al momento en que un n
 Para referenciar a un proceso ($nodo$) usamos su \texttt{rank} dentro del communicator global \texttt{MPI\_COMM\_WORLD}. Cada nodo metiene las variables \texttt{mpi\_rank} y \texttt{total\_nodes}. Así, para cada 1 $\leq i \leq$ \texttt{total\_nodes}, definimos $destino$ como $(i + \texttt{mpi\_rank})$ $mod$ \texttt{total\_nodes} y enviamos el mensaje usando \texttt{MPI\_Send} con $destino$, $bloque$ y el tag \texttt{TAG\_NEW\_BLOCK} como parámetros (principalmente). Es decir, enviamos el bloque desde el nodo siguiente al que lo minó en adelante, asegurándonos así que todos los nodos envíen mensajes en distinto orden.
  
 \subsection{Ejercicio 2}
-Para la resulución de este ejercicio, se agregó a la información que mantiene cada nodo un bool atómico \texttt{probando}. Además, se implementaron las funciones \texttt{lock} y \texttt{unlock} como se muestran a continuación:
-
-\begin{algorithm}[H]
-\SetKwProg{Fn}{Función}{}{fin}
-\SetAlgoLined
-\Fn{lock()}{
-	$expected$ $\leftarrow$ \texttt{false} \\
-	\While{$\lnot$ \texttt{probando}.compare\_exchange\_weak($expected$, \texttt{true})}{
-		$expected$ $\leftarrow$ \texttt{false}
-	}
-}
-\caption{\texttt{lock}}
-\end{algorithm}
-
-\begin{algorithm}[H]
-\SetKwProg{Fn}{Función}{}{fin}
-\SetAlgoLined
-\Fn{unlock()}{
-	\texttt{probando} $\leftarrow$ \texttt{false}
-}
-\caption{\texttt{unlock}}
-\end{algorithm}
-
-\textbf{TODO: Creo que no hace faltan esos pseudocódigos, decir que implementamos un spinlock.}
-
-Se pedía modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para evitar $race$ $conditinos$. A continuación, se muestra el pseudocódigo de la parte implementada del método \texttt{node}:
+Para la resolución de este ejercicio, se agregó a la información que mantiene cada nodo un bool atómico \texttt{probando}, con el cual se implementó un $spinlock$. Se pedía modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para evitar $race$ $conditinos$. A continuación, se muestra el pseudocódigo de la parte implementada del método \texttt{node}:
 
 \begin{algorithm}[H]
 \SetKwProg{Fn}{Función}{}{fin}
@@ -124,7 +99,7 @@ Se pedía modificar las funciones \texttt{node} y \texttt{proof\_of\_work} para 
 			\texttt{unlock()}
 		} \comentario{Si es un mensaje de pedido de cadena} \\
 		\ElseIf{status.tag = TAG\_CHAIN\_HASH}{
-			$status$ $\leftarrow$ \texttt{MPI\_Recv($block_hash$)} \\
+			$status$ $\leftarrow$ \texttt{MPI\_Recv($block\_hash$)} \\
 			\texttt{mandar\_cadena}($block\_hash$, $status$) \\
 		}
 	}
@@ -137,8 +112,6 @@ Ya que el mensaje recibido puede contener un bloque minado por otro o un hash pa
 Si se recibe un mensaje con $tag$ \texttt{TAG\_CHAIN\_HASH} entonces se invoca a la función \texttt{mandar\_cadena} que manda la cadena al nodo que la solicitó. Para eso, la misma crea un arreglo de bloque cuyo tamaño (en cantidad) es el mínimo entre \texttt{VALIDATION\_BLOCKS} y el índice del bloque del hash solicitada. A continuación llena el arreglo, en la primera posición con el bloque del hash recibido y en las siguientes con los bloques anteriores. Los bloques los obtiene usando el diccionario \texttt{node\_blocks}.
 
 En cuanto a la función \texttt{proof\_of\_work}, una vez que se consigue la cantidad de ceros requerida por la dificultad configurada, se ejecuta un bloque que inicialmente verifica que no haya cambiado \texttt{last\_block\_in\_chain} y finalmente llama a \texttt{broadcast\_block} para comunicar que se ha minado un bloque. Consideramos estas dos acciones como los límites de la sección crítica, así que llamamos a \texttt{lock()} inmediatamente antes de la primera y a \texttt{unlock()} inmediatamente después de la segunda, de esta forma evitamos \textit{race conditions} porque la cadena del nodo solo puede ser modificada por un \textit{thread} al mismo tiempo
-
-\textbf{TODO: Detallar acá \texttt{mandar\_cadena}? Pero antes ver lo de recibir hash en vez de bloque. Ver si hacemos lo de probe, el pseudcódigo puede ser más pseudo.}
 
 \subsection{Ejercicio 3}
 Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir si agregarlo o no a la cadena. Para eso se utiliza la función \texttt{validate\_block\_for\_chain}, la cual debía cumplir con el consenso definido en la sección 3 del enunciado. Su pseudocódigo es el siguiente:
@@ -220,7 +193,7 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 		devolver \texttt{false}		
 	}
 	agregar bloques recibidos a \texttt{node\_blocks} \\
-	\texttt{last\_block\_in\_chain} $\leftarrow$ $blockchain$[0] \\
+	\texttt{last\_block\_in\_chain} $\leftarrow$ primer bloque de $blockchain$ \\
 	devolver \texttt{true}	
 }
 \caption{\texttt{verificar\_y\_migrar\_cadena}}
@@ -228,7 +201,7 @@ Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizar
 
 El arreglo $blockchain$ se crea con tamaño \texttt{VALIDATION\_BLOCKS} y en \texttt{MPI\_Recv} se especifica este valor para la cantidad máxima de bloques recibidos. Sin embargo, se pueden recibir menos y por eso utilizamos la función \texttt{MPI\_Get\_count} para saber la cantidad de bloques recibida. 
 
-En cuanto al segundo ítem de verificaciones del conceso, el enunciando especifica que ``El hash del bloque recibido es igual al calculado por la función \texttt{block\_to\_hash}.''. Lo que hicimos en cambio fue revisar que el hash además resuelva el problema usando la función \texttt{solves\_problem}, y la verificación la hacemos para todos los blqoues recibidos, no solo uno.
+En cuanto al segundo ítem de verificaciones del conceso, el enunciando especifica que ``El hash del bloque recibido es igual al calculado por la función \texttt{block\_to\_hash}.''. Lo que hicimos en cambio fue revisar que el hash además resuelva el problema usando la función \texttt{solves\_problem}, y la verificación la hacemos para todos los bloques recibidos, no solo uno.
 
 Esta función se llama solo desde la \texttt{validate\_block\_for\_chain}, la cual ya dijimos que se ejecuta dentro de la sección crítica, así que no hay \textit{race conditions} con el \textit{thread} que mina bloques.
 
@@ -246,11 +219,11 @@ En el protocolo implementado es posible que se produzca una bifurcación de bloc
  
 Si dicha situación persiste hasta que sus blockchains superen en logitud a la constante \texttt{VALIDATION\_BLOCKS}, sus cadenas ya no podrán converger pues no se pueden migrar cadenas que superen esa longitud.
     
-La demora o la pérdida de paquetes facilita que se de la situación antes mencionada. Los nodos, al enterarse tarde o directamente no enterarse de las acciones del resto, pueden caer en conflictos de conseso y así las blockchains de dos o más nodos pueden ir difiriendo hasta que ya no sea posible la convergencia. Particularmente, la demora de paquetes puede tener dos efectos distintos, o bien le puede dar suficiente tiempo a un nodo para que mine un bloque de un índice igual a uno que pudo haber recibido antes de otro nodo, o bien puede hacer que los bloques cuando sean recibidos sean tan viejos que se consideren inválidos por \texttt{valid\_new\_block} y se descarten. 
+La demora o la pérdida de paquetes facilita que se de la situación antes mencionada. Los nodos, al enterarse tarde o directamente no enterarse de las acciones del resto, pueden caer en conflictos de consenso y así las blockchains de dos o más nodos pueden ir difiriendo hasta que ya no sea posible la convergencia. Particularmente, la demora de paquetes puede tener dos efectos distintos, o bien le puede dar suficiente tiempo a un nodo para que mine un bloque de un índice igual a uno que pudo haber recibido antes de otro nodo, o bien puede hacer que los bloques cuando sean recibidos sean tan viejos que se consideren inválidos por \texttt{valid\_new\_block} y se descarten. 
 
 A mayor dificultad resulta más difícil minar exitosamente un bloque, bajo esta condición es más probable que cuando un nodo mine un bloque el resto lo reciba y lo agregue a sus cadenas antes de que otro mine uno distinto, por lo que sería esperable que todos los nodos tengan la misma cadena, facilitando así la convergencia. Por otro lado, a menor dificultad, los bloques se minarían con mayor frecuencia, así que de este modo sería probable que se produzcan más migraciones y más conflictos suaves, atentando así contra la convergencia del mismo modo ya discutido en esta sección.
 
-Además, mientras más nodos tenga la red los bloques se minarían con más frecuencia. Si se permitese que más nodos ingresasen a la red entonces con el tiempo los bloques se minarían cada menos tiempo, aumentando así los conflictos (teniendo así un efecto similar a bajar la dificultad). Para solucionar este problema, en $Bitcoin$ la dificultad no está fija, sino que cada 2016 bloques se modifica. La idea es que la frecuencia de bloques minados se mantenga, siendo el objetivo 10 minutos por bloques, es decir 20160 minutos para 2016 bloques. Para lograr esto, la dificultad se aumenta o reduce cuánto se tardó en minar los últimos 2016 bloques, de acuerdo a la siguiente fórmula (llamando $tiempo$ a la cantidad de minutos que tomó minar los últimos 2016 bloques):
+Además, mientras más nodos tenga la red, los bloques se minarían con mayor frecuencia. Si se permitese que más nodos ingresasen a la red los bloques comenzarían a minarse cada menos tiempo, aumentando así los conflictos (teniendo un efecto similar a bajar la dificultad). Para solucionar este problema, en $Bitcoin$ la dificultad no está fija, sino que cada 2016 bloques se modifica. La idea es que la frecuencia de bloques minados se mantenga, siendo el objetivo 10 minutos por bloques, es decir 20160 minutos para 2016 bloques. Para lograr esto, la dificultad se aumenta o reduce según cuánto se tardó en minar los últimos 2016 bloques, de acuerdo a la siguiente fórmula (llamando $tiempo$ a la cantidad de minutos que tomó minar los últimos 2016 bloques):
 \begin{equation*}
 dificultad\_nueva = dificultad\_vieja \times \frac{20160}{tiempo}
 \end{equation*}
