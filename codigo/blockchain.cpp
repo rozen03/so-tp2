@@ -33,7 +33,6 @@ int main(int argc, char **argv) {
 
     //Llama a la función que maneja cada nodo
     node();
-
     // Limpio MPI
     MPI_Finalize();
     delete MPI_BLOCK;
