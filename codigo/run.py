@@ -18,7 +18,8 @@ def probar():
 		print(str(inst))
 		print("EXODIA")
 		return False
-for i in range(1):
+repeticiones=10
+for i in range(repeticiones):
 	while(not probar()):
 		pass
 
