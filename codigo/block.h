@@ -3,8 +3,9 @@
 
 #define HASH_SIZE 256
 #define NONCE_SIZE 10
-#define DEFAULT_DIFFICULTY 15
-#define BLOCKS_TO_MINE 10
+// #define DEFAULT_DIFFICULTY 15
+#define DEFAULT_DIFFICULTY 2
+#define BLOCKS_TO_MINE 5
 #define VALIDATION_MINUTES 1
 #define VALIDATION_BLOCKS 5
 
@@ -15,13 +16,13 @@ using namespace std;
 
 //Bloque de la cadena
 struct Block {
-  unsigned int index;
-  unsigned int node_owner_number;
-  unsigned int difficulty;
-  unsigned long int created_at;
-  char nonce[NONCE_SIZE];
-  char previous_block_hash[HASH_SIZE];
-  char block_hash[HASH_SIZE];
+    unsigned int index;
+    unsigned int node_owner_number;
+    unsigned int difficulty;
+    unsigned long int created_at;
+    char nonce[NONCE_SIZE];
+    char previous_block_hash[HASH_SIZE];
+    char block_hash[HASH_SIZE];
 };
 
 bool solves_problem(const string& hash);

@@ -1,17 +1,17 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-(
 import subprocess
-procesos=4
-command=["mpirun -np "+ str(procesos)+" ./blockchain"]
-f=open("exp.csv", mode="a")
-def probar():
+
+f=open("exp10.csv", mode="w")
+def probar(procesos):
 	try:
-		subprocess.check_call(command,stdout=None,shell=True,timeout=30)
-		for i in range(procesos):
-			with open(str(i)+".txt") as ff:
-				line=ff.readline()
-				print(line)
-				f.write(line)
+		logs = open("logs.txt", "w")
+		command=["mpirun -np "+ str(procesos)+" ./blockchain"]
+		subprocess.check_call(command,stdout=logs,shell=True,timeout=3000)
+		commanDOS=["cat logs.txt | grep 'Conflicto suave' | wc -l"]
+		proc=subprocess.Popen(commanDOS,stdout=subprocess.PIPE,shell=True)
+		output = proc.stdout.read().strip().decode("utf-8")
+		f.write(str(procesos)+","+output+"\n")
 		print("termine bien")
 		return True
 	except Exception as inst:
@@ -20,8 +20,9 @@ def probar():
 		return False
 repeticiones=10
 for i in range(repeticiones):
-	while(not probar()):
-		pass
-
+	for n in [5,10,20,50]:
+		print("Repeticion:"+str(i)+", Nodos:"+str(n))
+		while(not probar(n)):
+			pass
 print("LISTO")
 f.close()
