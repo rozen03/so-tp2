@@ -20,27 +20,12 @@ map<string,Block> node_blocks;
 atomic<bool> probando;
 uint vericaciones =0;
 uint fallidos=0;
-void* writeIndex(void * bleh){
-	int index=-1;
-	ofstream myfile;
-	myfile.open (to_string(mpi_rank)+".txt");
-	while(true){
-		if (index==last_block_in_chain->index){
-			continue;
-		}
-		index=last_block_in_chain->index;
-		myfile << last_block_in_chain->index<<","<<last_block_in_chain->node_owner_number<<endl;
-		if (last_block_in_chain->index +1 == MAX_BLOCKS){
-			break;
-		}
-	}
-	myfile.close();
 
-	return NULL;
-}
 //Cuando me llega una cadena adelantada, y tengo que pedir los nodos que me faltan
 //Si nos separan más de VALIDATION_BLOCKS bloques de distancia entre las cadenas, se descarta por seguridad
 bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status) {
+	vericaciones++;
+	fallidos++;
 	// printf("[%d] a ver qe onda2\n",mpi_rank);
     //Enviar mensaje TAG_CHAIN_HASH
     MPI_Send(rBlock->block_hash,HASH_SIZE, MPI_CHAR, status->MPI_SOURCE, TAG_CHAIN_HASH, MPI_COMM_WORLD);
@@ -94,7 +79,7 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status) {
     if (!hayAlguno && blockchain[count-1].index!=1) {
         printf("[%d] Migración fallida, %d me dio una cadena que no puedo unir \n", mpi_rank, status->MPI_SOURCE);
         delete []blockchain;
-        return false;hac
+        return false;
     }
 
 
@@ -104,6 +89,7 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status) {
     *last_block_in_chain = blockchain[0];
     printf("[%d] Migración con éxito a la cadena de %d \n", mpi_rank, status->MPI_SOURCE);
     // delete []blockchain;
+	fallidos--;
     return true;
 
 }
@@ -269,8 +255,6 @@ int node(){
     //Crear thread para minar
     pthread_t minero;
     pthread_create(&minero, NULL, proof_of_work, NULL);
-	pthread_t escritor;
-	pthread_create(&escritor, NULL, writeIndex, NULL);
 
     char block_hash[HASH_SIZE];
     Block *block = new Block;
@@ -280,16 +264,15 @@ int node(){
 	MPI_Status status;
     while(true){
 		//Recibir mensajes de otros nodos
-		if (last_block_in_chain->index  >= MAX_BLOCKS-10){
+		if (last_block_in_chain->index  >= MAX_BLOCKS-10){//un numero random por si quedan mensajes igual
 			MPI_Iprobe(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&flag,&status);
 			// cout<<mpi_rank<< " "<<flag<< " "<<timeout<<endl;
 			if (!flag){
+				// printf("nope\n");
 				timeout--;
 				if ((timeout==0) && (last_block_in_chain->index +1 >= MAX_BLOCKS)){
 					// printf("[%d] chauchas \n",mpi_rank);
-					delete last_block_in_chain;
-					delete block;
-					return 0;
+					break;
 				}
 				flag=(int)false;
 				continue;
@@ -313,7 +296,10 @@ int node(){
             mandar_cadena(block_hash, &status);
         }
     }
-
+	ofstream myfile;
+	myfile.open(to_string(mpi_rank)+".txt");
+	myfile<<mpi_rank<<","<<vericaciones<<","<<fallidos<<endl;
+	myfile.close();
     delete last_block_in_chain;
     delete block;
     return 0;
