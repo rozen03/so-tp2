@@ -235,17 +235,15 @@ Con el fin de tener evidencia empírica de que los conflictos aumentan a menor d
 
 Para que las ejecuciones terminen hicimos que cuando un nodo mine un bloque de índice \texttt{MAX\_BLOCKS} (200 en nuestro caso), use la función \texttt{MPI\_Abort}, y de esta forma tener un log de eventos hasta este punto para poder analizar. 
 
-Además, consideramos que también las ejecuciones pueden interrumpirse por algún error, sobre todo en los casos más exhaustivos (muchos nodos y poca dificultad), por lo que estos logs los ignoramos y repetimos la ejecución hasta tener una exitosa. \textbf{TODO: Hablar más de esto?}
+Además, consideramos que también las ejecuciones pueden interrumpirse por algún error en funciones de MPI, sobre todo en los casos más exhaustivos (muchos nodos y poca dificultad), por lo que estos logs los ignoramos y repetimos la ejecución hasta tener una exitosa.
 
-
-
-\begin{center}
-%   \includegraphics[height=5.85cm]{img/exp.png}
+\begin{center}.
+   \includegraphics[height=9cm]{img/exp.png}
    \captionof{figure}{Cantidad promedio de conflictos suaves para distintas dificultades y cantidad de nodos.}
    \label{fig:exp}
 \end{center}
 
-A partir de la \textbf{Figura \ref{fig:exp}}, vemos que nuestras hipótesis parecen ser ciertas. \textbf{TODO: coso}
+A partir de la \textbf{Figura \ref{fig:exp}}, vemos que nuestras hipótesis parecen ser ciertas, el eje vertical muestra en escala logarítmica la cantidad en promedio de conflictos suaves de las ejecuciones según la dificultad y cantidad de nodos.
 
 
 
@@ -254,8 +252,6 @@ A partir de la \textbf{Figura \ref{fig:exp}}, vemos que nuestras hipótesis pare
 \includepdf[scale=0.75,pages=1,pagecommand=\section{Apéndices}
 \subsection{Apéndice A - Enunciado}]{../enunciado.pdf}
 \includepdf[scale=0.75,pages=2-,pagecommand=]{../enunciado.pdf}
-
-\subsection{Apéndice B - Aclaraciones}
 
 \end{document}
 
