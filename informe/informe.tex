@@ -150,7 +150,7 @@ Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir 
 		}
 	}
 	\comentario{1er item del consenso} \\
-	devolver \textit{false}
+	devolver \texttt{false}
 }
 \caption{\texttt{validate\_block\_for\_chain}}
 \end{algorithm}
@@ -219,18 +219,35 @@ En el protocolo implementado es posible que se produzca una bifurcación de bloc
  
 Si dicha situación persiste hasta que sus blockchains superen en logitud a la constante \texttt{VALIDATION\_BLOCKS}, sus cadenas ya no podrán converger pues no se pueden migrar cadenas que superen esa longitud.
     
-La demora o la pérdida de paquetes facilita que se de la situación antes mencionada. Los nodos, al enterarse tarde o directamente no enterarse de las acciones del resto, pueden caer en conflictos de consenso y así las blockchains de dos o más nodos pueden ir difiriendo hasta que ya no sea posible la convergencia. Particularmente, la demora de paquetes puede tener dos efectos distintos, o bien le puede dar suficiente tiempo a un nodo para que mine un bloque de un índice igual a uno que pudo haber recibido antes de otro nodo, o bien puede hacer que los bloques cuando sean recibidos sean tan viejos que se consideren inválidos por \texttt{valid\_new\_block} y se descarten. 
+La demora o la pérdida de paquetes facilita que se de la situación antes mencionada. Los nodos, al enterarse tarde o directamente no enterarse de las acciones del resto, pueden caer en conflictos de consenso y así las blockchains de dos o más nodos pueden ir difiriendo hasta que ya no sea posible la convergencia. Particularmente, la demora de paquetes puede tener dos efectos distintos, o bien le puede dar suficiente tiempo a un nodo para que mine un bloque de un índice igual a uno que pudo haber recibido antes de otro nodo, o bien puede hacer que los bloques cuando sean recibidos sean tan viejos que se consideren inválidos por \texttt{valid\_new\_block} y se descarten. Cabe resaltar que el protocolo implementado no tiene como característica priorizar la convergencia, pues el envío de los bloques se hace sin una verificación de su recepción, cuando podría ser un caso a tener en cuenta para poder tomar acciones.  
 
-A mayor dificultad resulta más difícil minar exitosamente un bloque, bajo esta condición es más probable que cuando un nodo mine un bloque el resto lo reciba y lo agregue a sus cadenas antes de que otro mine uno distinto, por lo que sería esperable que todos los nodos tengan la misma cadena, facilitando así la convergencia. Por otro lado, a menor dificultad, los bloques se minarían con mayor frecuencia, así que de este modo sería probable que se produzcan más migraciones y más conflictos suaves, atentando así contra la convergencia del mismo modo ya discutido en esta sección.
+También se observa que a mayor dificultad resulta más difícil minar exitosamente un bloque, bajo esta condición es más probable que cuando un nodo mine un bloque el resto lo reciba y lo agregue a sus cadenas antes de que otro mine uno distinto, por lo que sería esperable que todos los nodos tengan la misma cadena, facilitando así la convergencia. Por otro lado, a menor dificultad, los bloques se minarían con mayor frecuencia, así que de este modo sería probable que se produzcan más migraciones y más conflictos suaves, atentando así contra la convergencia del mismo modo ya discutido en esta sección.
 
-Además, mientras más nodos tenga la red, los bloques se minarían con mayor frecuencia. Si se permitese que más nodos ingresasen a la red los bloques comenzarían a minarse cada menos tiempo, aumentando así los conflictos (teniendo un efecto similar a bajar la dificultad). Para solucionar este problema, en $Bitcoin$ la dificultad no está fija, sino que cada 2016 bloques se modifica. La idea es que la frecuencia de bloques minados se mantenga, siendo el objetivo 10 minutos por bloques, es decir 20160 minutos para 2016 bloques. Para lograr esto, la dificultad se aumenta o reduce según cuánto se tardó en minar los últimos 2016 bloques, de acuerdo a la siguiente fórmula (llamando $tiempo$ a la cantidad de minutos que tomó minar los últimos 2016 bloques):
+Además, mientras más nodos tenga la red, los bloques se minarían con mayor frecuencia. En este protocolo la cantidad de nodos es establecida desde el inicio, pero en uno en donde se permita que más nodos ingresen a la red se tendría otro factor que varíe la cantidad de bloques minados por unidad de tiempo. En un sistema así, para mantener una frecuencia de minado constante se puede variar la $dificultad$ como lo hace $Bitcoin$, donde se modifica cada 2016 bloques según el tiempo que llevó minarlos. Siendo el objetivo 10 minutos por bloque (es decir, 20160 minutos para 2016 bloques), la dificultad se aumenta o reduce según la siguiente fórmula(llamando $tiempo$ a la cantidad de minutos que tomó minar los últimos 2016 bloques):
+
 \begin{equation*}
 dificultad\_nueva = dificultad\_vieja \times \frac{20160}{tiempo}
 \end{equation*}
- 
-\textbf{TODO: Referenciar experimento que respalde estas hipótesis} 
 
-\section{Experimentación}
+Esto no solo contempla el hecho de que la cantidad de nodos en la red varíe, sino también a que cada vez las computadoras tienen mayor poder de cómputo, por lo que también por esto es necesario ajustar la dificultad e históricamente la misma suele subir.\footnote{\url{https://bitinfocharts.com/comparison/bitcoin-difficulty.html}}
+ 
+Con el fin de tener evidencia empírica de que los conflictos aumentan a menor dificultad o mayor cantidad de nodos, llevamos a cabo un experimento. En el mismo hicimos ejecuciones con distintos valores de dificultad (5, 10 y 15) y cantidad de nodos (5, 10, 20 y 50), haciendo 10 repeticiones por cada combinación y contando la cantidad de conflictos suaves en cada una (es decir, cuántas veces un nodo rechanza bloques por tener índice menor o igual a su último).
+
+Para que las ejecuciones terminen hicimos que cuando un nodo mine un bloque de índice \texttt{MAX\_BLOCKS} (200 en nuestro caso), use la función \texttt{MPI\_Abort}, y de esta forma tener un log de eventos hasta este punto para poder analizar. 
+
+Además, consideramos que también las ejecuciones pueden interrumpirse por algún error, sobre todo en los casos más exhaustivos (muchos nodos y poca dificultad), por lo que estos logs los ignoramos y repetimos la ejecución hasta tener una exitosa. \textbf{TODO: Hablar más de esto?}
+
+
+
+\begin{center}
+%   \includegraphics[height=5.85cm]{img/exp.png}
+   \captionof{figure}{Cantidad promedio de conflictos suaves para distintas dificultades y cantidad de nodos.}
+   \label{fig:exp}
+\end{center}
+
+A partir de la \textbf{Figura \ref{fig:exp}}, vemos que nuestras hipótesis parecen ser ciertas. \textbf{TODO: coso}
+
+
 
 
 \newpage
