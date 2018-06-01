@@ -223,15 +223,9 @@ La demora o la pérdida de paquetes facilita que se de la situación antes menci
 
 También se observa que a mayor dificultad resulta más difícil minar exitosamente un bloque, bajo esta condición es más probable que cuando un nodo mine un bloque el resto lo reciba y lo agregue a sus cadenas antes de que otro mine uno distinto, por lo que sería esperable que todos los nodos tengan la misma cadena, facilitando así la convergencia. Por otro lado, a menor dificultad, los bloques se minarían con mayor frecuencia, así que de este modo sería probable que se produzcan más migraciones y más conflictos suaves, atentando así contra la convergencia del mismo modo ya discutido en esta sección.
 
-Además, mientras más nodos tenga la red, los bloques se minarían con mayor frecuencia. En este protocolo la cantidad de nodos es establecida desde el inicio, pero en uno en donde se permita que más nodos ingresen a la red se tendría otro factor que varíe la cantidad de bloques minados por unidad de tiempo. En un sistema así, para mantener una frecuencia de minado constante se puede variar la $dificultad$ como lo hace $Bitcoin$, donde se modifica cada 2016 bloques según el tiempo que llevó minarlos. Siendo el objetivo 10 minutos por bloque (es decir, 20160 minutos para 2016 bloques), la dificultad se aumenta o reduce según la siguiente fórmula(llamando $tiempo$ a la cantidad de minutos que tomó minar los últimos 2016 bloques):
-
-\begin{equation*}
-dificultad\_nueva = dificultad\_vieja \times \frac{20160}{tiempo}
-\end{equation*}
-
-Esto no solo contempla el hecho de que la cantidad de nodos en la red varíe, sino también a que cada vez las computadoras tienen mayor poder de cómputo, por lo que también por esto es necesario ajustar la dificultad e históricamente la misma suele subir.\footnote{\url{https://bitinfocharts.com/comparison/bitcoin-difficulty.html}}
+Además, mientras más nodos tenga la red, los bloques se minarían con mayor frecuencia, y el efecto sería similar a tener una baja dificultad, los conflictos aumentarían.
  
-Con el fin de tener evidencia empírica de que los conflictos aumentan a menor dificultad o mayor cantidad de nodos, llevamos a cabo un experimento. En el mismo hicimos ejecuciones con distintos valores de dificultad (5, 10 y 15) y cantidad de nodos (5, 10, 20 y 50), haciendo 10 repeticiones por cada combinación y contando la cantidad de conflictos suaves en cada una (es decir, cuántas veces un nodo rechanza bloques por tener índice menor o igual a su último).
+Con el fin de tener evidencia empírica de afirmaciones dichas en esta seccón, llevamos a cabo un experimento. En el mismo hicimos ejecuciones con distintos valores de dificultad (5, 10 y 15) y cantidad de nodos (5, 10, 20 y 50), haciendo 10 repeticiones por cada combinación y contando la cantidad de conflictos suaves en cada una (es decir, cuántas veces un nodo rechanza bloques por tener índice menor o igual a su último).
 
 Para que las ejecuciones terminen hicimos que cuando un nodo mine un bloque de índice \texttt{MAX\_BLOCKS} (200 en nuestro caso), use la función \texttt{MPI\_Abort}, y de esta forma tener un log de eventos hasta este punto para poder analizar. 
 
@@ -243,7 +237,14 @@ Además, consideramos que también las ejecuciones pueden interrumpirse por alg�
    \label{fig:exp}
 \end{center}
 
-A partir de la \textbf{Figura \ref{fig:exp}}, vemos que nuestras hipótesis parecen ser ciertas, el eje vertical muestra en escala logarítmica la cantidad en promedio de conflictos suaves de las ejecuciones según la dificultad y cantidad de nodos.
+A partir de la \textbf{Figura \ref{fig:exp}}, vemos que nuestras hipótesis parecen ser ciertas, el eje vertical muestra en escala logarítmica la cantidad en promedio de conflictos suaves de las ejecuciones según la dificultad y cantidad de nodos. En efecto, se tienen menos conflictos cuando mayor es la dificultad y menor es la cantidad de nodos.
+
+En este protocolo la cantidad de nodos es establecida desde el inicio, pero en uno en donde se permita que más nodos ingresen a la red se tendría otro factor que varíe la cantidad de bloques minados por unidad de tiempo. En un sistema así, para mantener una frecuencia de minado constante se puede variar la $dificultad$ como lo hace $Bitcoin$, donde se modifica cada 2016 bloques según el tiempo que llevó minarlos. Siendo el objetivo 10 minutos por bloque (es decir, 20160 minutos para 2016 bloques), la dificultad se aumenta o reduce según la siguiente fórmula(llamando $tiempo$ a la cantidad de minutos que tomó minar los últimos 2016 bloques):
+\begin{equation*}
+dificultad\_nueva = dificultad\_vieja \times \frac{20160}{tiempo}
+\end{equation*}
+
+Esto no solo contempla el hecho de que la cantidad de nodos en la red varíe, sino también a que cada vez las computadoras tienen mayor poder de cómputo, por lo que también por esto es necesario ajustar la dificultad e históricamente la misma suele subir.\footnote{\url{https://bitinfocharts.com/comparison/bitcoin-difficulty.html}}
 
 
 
