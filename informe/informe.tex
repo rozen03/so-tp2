@@ -158,7 +158,7 @@ Cuando un nodo mine un nuevo bloque y le avise al resto, estos deberán decidir 
 Esta función puede modificar \texttt{last\_block\_in\_chain} a salvo de \textit{race conditions} porque se llama dentro de la sección crítica que definimos en el ejercicio anterior. 
  
 \subsection{Ejercicio 4}
-Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizará la función \texttt{verificar\_y\_migrar\_cadena}. La misma debía cumplir con el protocolo descripto en la sección 4 del enunciado. A continuación se muestra su pseudocódigo:
+Llegado al caso donde un nodo deba migrar a la $blockchain$ de otro, se utilizará la función \\ \texttt{verificar\_y\_migrar\_cadena}. La misma debía cumplir con el protocolo descripto en la sección 4 del enunciado. A continuación se muestra su pseudocódigo:
 
 \begin{algorithm}[H]
 \SetKwProg{Fn}{Función}{}{fin}
@@ -239,15 +239,12 @@ Además, consideramos que también las ejecuciones pueden interrumpirse por alg�
 
 A partir de la \textbf{Figura \ref{fig:exp}}, vemos que nuestras hipótesis parecen ser ciertas, el eje vertical muestra en escala logarítmica la cantidad en promedio de conflictos suaves de las ejecuciones según la dificultad y cantidad de nodos. En efecto, se tienen menos conflictos cuando mayor es la dificultad y menor es la cantidad de nodos.
 
-En este protocolo la cantidad de nodos es establecida desde el inicio, pero en uno en donde se permita que más nodos ingresen a la red se tendría otro factor que varíe la cantidad de bloques minados por unidad de tiempo. En un sistema así, para mantener una frecuencia de minado constante se puede variar la $dificultad$ como lo hace $Bitcoin$, donde se modifica cada 2016 bloques según el tiempo que llevó minarlos. Siendo el objetivo 10 minutos por bloque (es decir, 20160 minutos para 2016 bloques), la dificultad se aumenta o reduce según la siguiente fórmula(llamando $tiempo$ a la cantidad de minutos que tomó minar los últimos 2016 bloques):
+En este protocolo la cantidad de nodos es establecida desde el inicio, pero en uno en donde se permita que más nodos ingresen a la red se tendría otro factor que varíe la cantidad de bloques minados por unidad de tiempo. En un sistema así, para mantener una frecuencia de minado constante se puede variar la $dificultad$ como lo hace $Bitcoin$, donde se modifica cada 2016 bloques según el tiempo que llevó minarlos. Siendo el objetivo 10 minutos por bloque (es decir, 20160 minutos para 2016 bloques), la dificultad se aumenta o reduce según la siguiente fórmula (llamando $tiempo$ a la cantidad de minutos que tomó minar los últimos 2016 bloques):
 \begin{equation*}
 dificultad\_nueva = dificultad\_vieja \times \frac{20160}{tiempo}
 \end{equation*}
 
 Esto no solo contempla el hecho de que la cantidad de nodos en la red varíe, sino también a que cada vez las computadoras tienen mayor poder de cómputo, por lo que también por esto es necesario ajustar la dificultad e históricamente la misma suele subir.\footnote{\url{https://bitinfocharts.com/comparison/bitcoin-difficulty.html}}
-
-
-
 
 \newpage
 \includepdf[scale=0.75,pages=1,pagecommand=\section{Apéndices}
