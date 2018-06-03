@@ -176,7 +176,7 @@ void* proof_of_work(void *ptr){
         block.index += 1;
         block.node_owner_number = mpi_rank;
         block.difficulty = DEFAULT_DIFFICULTY;
-        last_block_in_chain->created_at = static_cast<unsigned long int> (time(NULL));
+        block.created_at = static_cast<unsigned long int> (time(NULL));
         memcpy(block.previous_block_hash,block.block_hash,HASH_SIZE);
 
         //Agregar un nonce al azar al bloque para intentar resolver el problema
