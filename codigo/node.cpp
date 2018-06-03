@@ -10,10 +10,12 @@
 #include <map>
 #include <unistd.h>
 #include <mutex>
+
 int total_nodes, mpi_rank;
 Block *last_block_in_chain;
 map<string,Block> node_blocks;
 atomic<bool> probando;
+
 //Cuando me llega una cadena adelantada, y tengo que pedir los nodos que me faltan
 //Si nos separan más de VALIDATION_BLOCKS bloques de distancia entre las cadenas, se descarta por seguridad
 bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status) {
@@ -85,7 +87,6 @@ bool verificar_y_migrar_cadena(const Block *rBlock, const MPI_Status *status) {
 
 //Verifica que el bloque tenga que ser incluido en la cadena, y lo agrega si corresponde
 bool validate_block_for_chain(const Block *rBlock, const MPI_Status *status){
-	// printf("[%d] a ver qe onda\n",mpi_rank);
     if(valid_new_block(rBlock)){
 
         //Agrego el bloque al diccionario, aunque no necesariamente eso lo agrega a la cadena
@@ -170,9 +171,7 @@ void* proof_of_work(void *ptr){
     Block block;
     unsigned int mined_blocks = 0;
     while(true){
-		lock();
         block = *last_block_in_chain;
-		unlock();
         //Preparar nuevo bloque
         block.index += 1;
         block.node_owner_number = mpi_rank;
@@ -200,10 +199,10 @@ void* proof_of_work(void *ptr){
             unlock();
         }
 
-		if (last_block_in_chain->index  >= MAX_BLOCKS){
-			MPI_Abort(MPI_COMM_WORLD,0);
-			break;
-		}
+        if (last_block_in_chain->index  >= MAX_BLOCKS){
+            MPI_Abort(MPI_COMM_WORLD,0);
+            break;
+        }
     }
 
     return NULL;
@@ -247,17 +246,17 @@ int node(){
 
     char block_hash[HASH_SIZE];
     Block *block = new Block;
-	MPI_Status status;
+    MPI_Status status;
     while(true){
-		//Recibir mensajes de otros nodos
-			 MPI_Probe(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+        //Recibir mensajes de otros nodos
+        MPI_Probe(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
         auto tag = status.MPI_TAG;
         if (tag == TAG_NEW_BLOCK) {
             MPI_Recv(block, 1, *MPI_BLOCK,  status.MPI_SOURCE, TAG_NEW_BLOCK, MPI_COMM_WORLD, &status);
             //Si es un mensaje de nuevo bloque, llamar a la función validate_block_for_chain con el bloque recibido y el estado de MPI
             lock();
             validate_block_for_chain(block, &status);
-			unlock();
+            unlock();
         } else if(tag == TAG_CHAIN_HASH) {
             //Si es un mensaje de pedido de cadena, responderlo enviando los bloques correspondientes
             MPI_Recv(block_hash, HASH_SIZE, MPI_CHAR, status.MPI_SOURCE, TAG_CHAIN_HASH, MPI_COMM_WORLD, &status);
@@ -265,10 +264,6 @@ int node(){
         }
 
     }
-	// ofstream myfile;
-	// myfile.open(to_string(mpi_rank)+".txt");
-	// myfile<<mpi_rank<<","<<vericaciones<<","<<fallidos<<endl;
-	// myfile.close();
     delete last_block_in_chain;
     delete block;
     return 0;
