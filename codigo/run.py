@@ -2,14 +2,19 @@
 # -*- coding: utf-8 -*-(
 import subprocess
 
-f=open("exp15.csv", mode="w")
+f=open("experrrr.csv", mode="w")
 def probar(procesos):
 	try:
 		logs = open("logs.txt", "w")
 		command=["mpirun -np "+ str(procesos)+" ./blockchain"]
 		subprocess.check_call(command,stdout=logs,shell=True,timeout=3000)
 		commanDOS=["cat logs.txt | grep 'Conflicto suave' | wc -l"]
-		proc=subprocess.Popen(commanDOS,stdout=subprocess.PIPE,shell=True)
+		proc=subprocess.Popen(commanDOS,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
+		errr=proc.stderr.read().strip().decode("utf-8")
+		if errr:
+			print(errr)
+		else:
+			print("NO ERRRR")
 		output = proc.stdout.read().strip().decode("utf-8")
 		f.write(str(procesos)+","+output+"\n")
 		logs.close()
