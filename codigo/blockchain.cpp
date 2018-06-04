@@ -15,7 +15,9 @@ MPI_Datatype *MPI_BLOCK;
 int main(int argc, char **argv) {
 
     // Inicializo MPI
-    int status = MPI_Init(&argc, &argv);
+	// int status = MPI_Init(&argc, &argv);
+	int provided;
+	int status= MPI_Init_thread( &argc, &argv, MPI_THREAD_SERIALIZED, &provided );
     if (status != MPI_SUCCESS){
         fprintf(stderr, "Error de MPI al inicializar.\n");
         MPI_Abort(MPI_COMM_WORLD, status);
